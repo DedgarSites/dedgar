@@ -1,6 +1,6 @@
 FROM openshift/base-centos7 
 
-RUN yum-install-check.sh -y golang && \
+RUN yum install -y golang && \
     yum clean all
 
 ENV GOLANG_VERSION 1.9
