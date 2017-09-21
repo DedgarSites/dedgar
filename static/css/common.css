@@ -1,0 +1,149 @@
+@charaset "utf-8";
+
+/* reset.css */
+html, body, div, span, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, code, del, dfn, em, img, q, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td{
+   margin: 0;
+   padding: 0;
+   border: 0;
+   list-style: none;
+   font-style: normal;
+   font-weight: normal;
+}
+table{border-collapse:separate; border-spacing:0;}
+caption, th, td{text-align:left; font-weight:400;}
+a img{border:none;}
+/* clearfix ----------- */
+.clearfix:after{
+   content: "."; 
+   display: block; 
+   height: 0; 
+   font-size:0;
+   clear: both; 
+   visibility:hidden;
+}
+.clearfix{display: inline-block;min-height:1%; /* for IE 7*/} 
+/* IE Mac */
+* html .clearfix{height: 1%;}
+.clearfix{display:block;}
+/* html5.jså¯¾å¿œç”¨ */
+article,aside,canvas,details,figcaption,figure,header,footer,main,menu,nav,section,summary {display: block;}
+/* box-sizingã§ã‚µã‚¤ã‚ºã‚’çµ±ä¸€ç®¡ç† */
+div,h1,h2,h3,h4,h5,h6,p,dl,dt,dd,ol,ul,li,form,input,textarea,button,table,tr,th,td,article,aside,footer,header,hgroup,nav,section,img,a,p{
+   -webkit-box-sizing: border-box;
+   -moz-box-sizing: border-box;
+   -o-box-sizing: border-box;
+   -ms-box-sizing: border-box;
+   box-sizing: border-box;
+}
+img {max-width: 100%;height: auto;vertical-align: bottom}
+iframe.twitter-share-button {width: 110px!important;}
+iframe[src*="www.facebook.com/plugins/like.php"]{width:115px !important;}
+
+/*ãƒ†ãƒ³ãƒ—ãƒ¬ãƒ¼ãƒˆ ã“ã“ã¾ã§///////////////////////////////////////////////*/
+/*################################################################################*/
+body,html{height: 100%;}
+body{
+   width:100%;
+   color: #111;
+   letter-spacing: 1px;
+   font-family: "ãƒ¡ã‚¤ãƒªã‚ª", Meiryo, "ãƒ’ãƒ©ã‚®ãƒŽè§’ã‚´Pro W3", "Hiragino Kaku Gothic Pro","æ¸¸ã‚´ã‚·ãƒƒã‚¯ä½“", "Yu Gothic", YuGothic, "ï¼­ï¼³ ï¼°ã‚´ã‚·ãƒƒã‚¯", sans-serif;
+   font-size: 14px;
+   line-height: 1.6;
+   overflow-y:scroll;
+   position: relative;
+}
+
+a{color: #CB0058; padding: 10px;}
+a:hover{color: #FF02BE;text-decoration: none;}
+.clear{clear: both;}
+
+/*é¸æŠžæ™‚ã®æ–‡å­—*/
+::selection {
+   color: #9bd1ff;
+   background-color: #333;
+   text-shadow: #000 0px 0px 3px;
+}
+::-moz-selection {
+   color: #ff61c2;
+   background-color: #333;
+   text-shadow: #000 0px 0px 3px;
+}
+noscript{
+   font-size:16px;
+   color: #000;
+   line-height:2em;
+   letter-spacing: 3px;
+   font-weight: bold;
+   text-align: center;
+   width: 100%;
+}
+.brTablet,.brSmp { display: block;}
+
+
+/*---------------------------------------------------------*/
+
+/*ãƒˆãƒƒãƒ—ãƒ˜æˆ»ã‚‹*/
+#backTop {
+   cursor: pointer;
+   position: fixed;
+   right: -170px;
+   bottom: 0px;
+   z-index: 999;
+   line-height: 0px;
+}
+.border{
+   border: 1px solid #333;
+   background-color: #000000;
+   -webkit-box-shadow: 0px 0px 4px #333;
+   box-shadow: 0px 0px 4px #333;
+   margin-right: 2px;
+   margin-left: 2px;
+}
+
+
+/*---------------------------------------------------------
+ãƒ¡ã‚¤ãƒ³ã‚³ãƒ³ãƒ†ãƒ³ãƒ„
+---------------------------------------------------------*/
+
+
+
+/*---------------------------------------------------------
+footer
+---------------------------------------------------------*/
+footer{
+   padding-top: 10px;
+   padding-bottom: 50px;
+   color: #fff;
+   font-size: 12px;
+   letter-spacing: 0px;
+   text-align:center;
+}
+.sns{margin-top: 20p;margin-bottom: 30px;line-height: 0;}
+
+
+/*################################################################################
+media query
+################################################################################*/
+
+
+
+/* ***********************************************************
+ã‚¹ãƒžãƒ›ã‚¿ãƒ–ãƒ¬ãƒƒãƒˆ
+*********************************************************** */
+@media screen and (max-width: 768px) {
+   .brTablet { display: inline;}
+   
+}
+
+
+/* ***********************************************************
+ã‚¹ãƒžãƒ›å°‚ç”¨
+*********************************************************** */
+@media screen and (max-width: 480px) {
+   .brSmp { display: inline;}
+   
+}
+
+
+
+
