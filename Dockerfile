@@ -17,6 +17,8 @@ WORKDIR /go/src/github.com/openshift/shinodev
 COPY . /go/src/github.com/openshift/shinodev
 RUN go-wrapper download && go-wrapper install
 
+EXPOSE 8080
+
 USER 1001
 
 CMD ["go-wrapper", "run"]
