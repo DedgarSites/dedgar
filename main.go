@@ -304,5 +304,5 @@ func main() {
 	e.GET("/kanjitainer/", getContainer)
 	e.GET("/kanji/:selection/:level", getLevel)
 	e.GET("/kanji/:selection/:level/:kanji", getKanji)
-	e.Logger.Info(e.Start(":1323"))
+	e.Logger.Info(e.Start(":8080"))
 }
