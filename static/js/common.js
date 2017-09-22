@@ -160,7 +160,7 @@ $(function(){
                 $('ul#sideNavi li a:eq(9)').addClass("selected");
             }
     });
-    $("#wrap").stop().css({opacity:0});
+    $("#wrap").stop();//.css({opacity:0});
     cEffectEnd();
 });
 
