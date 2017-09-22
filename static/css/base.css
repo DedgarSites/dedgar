@@ -10,6 +10,7 @@ body{
 #wrap{
     width:100%;
     background-image:url(../img/bg.png);
+    opacity: 1;
 }
 
 .br2{
@@ -207,7 +208,7 @@ ul#sideNavi .txt{
 #map{
     width:100%;
     /*height:798px;*/
-    background-image:url(../img/map.jpg);
+/*    background-image:url(../img/placeholder_image.png); */
     background-position:center top;
     background-repeat:no-repeat;
     text-align:center;
