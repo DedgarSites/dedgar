@@ -101,7 +101,7 @@ noscript{
 }
 .button {
     background: #5AB44F;
-    padding: 5px;
+    padding-right: inherit;
     text-align: center;
     border-radius: 5px;
     color: white;
