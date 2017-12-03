@@ -4,8 +4,9 @@ RUN yum install -y golang && \
     yum clean all
 
 ENV GOLANG_VERSION 1.9 \
-    GOPATH /go \
-    PATH $GOPATH/bin:/usr/local/go/bin:$PATH
+    GOPATH /go
+
+ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
 
 COPY go-wrapper /usr/local/bin/
 
