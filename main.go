@@ -8,10 +8,12 @@ import (
 	_ "github.com/lib/pq"
 	"html/template"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 )
 
 var (
@@ -30,6 +32,20 @@ func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Con
 	return t.templates.ExecuteTemplate(w, name, data)
 }
 
+func availableVids() map[string]bool {
+	files, err := ioutil.ReadDir("./static/vid")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	vid_map := make(map[string]bool)
+
+	for _, f := range files {
+		vid_map[f.Name()] = true
+	}
+	return vid_map
+}
+
 func getMain(c echo.Context) error {
 	return c.Render(http.StatusOK, "main.html", "main")
 }
@@ -44,11 +60,22 @@ func getShow(c echo.Context) error {
 	season := c.Param("season")
 	episode := c.Param("episode")
 
-	return c.Render(http.StatusOK, "episode_view.html", map[string]interface{}{
-		"show":    show,
-		"season":  season,
-		"episode": episode,
-	})
+	vid_list := availableVids()
+
+	if vid_list[show] {
+
+		if _, err := strconv.Atoi(season); err == nil {
+			if _, err := strconv.Atoi(episode); err == nil {
+
+				return c.Render(http.StatusOK, "episode_view.html", map[string]interface{}{
+					"show":    show,
+					"season":  season,
+					"episode": episode,
+				})
+			}
+		}
+	}
+	return echo.NewHTTPError(http.StatusNotFound, "404 Video not found")
 }
 
 func getJapanese(c echo.Context) error {
@@ -184,7 +211,6 @@ func getKanji(c echo.Context) error {
 		case nil:
 			//fmt.Println(kanj, von, vkun, transl, roma, rememb, jlpt, school)
 		default:
-			fmt.Println("boo")
 			log.Fatal(err)
 		}
 
