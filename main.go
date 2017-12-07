@@ -8,12 +8,10 @@ import (
 	_ "github.com/lib/pq"
 	"html/template"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 )
 
 var (
@@ -32,18 +30,11 @@ func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Con
 	return t.templates.ExecuteTemplate(w, name, data)
 }
 
-func availableVids() map[string]bool {
-	files, err := ioutil.ReadDir("./static/vid")
-	if err != nil {
-		log.Fatal(err)
+func availableVids(show string, season string, episode string) bool {
+	if _, err := os.Stat("./static/vid/" + show + "/" + season + "/" + episode + ".mp4"); err == nil {
+		return true
 	}
-
-	vid_map := make(map[string]bool)
-
-	for _, f := range files {
-		vid_map[f.Name()] = true
-	}
-	return vid_map
+	return false
 }
 
 func getMain(c echo.Context) error {
@@ -60,22 +51,16 @@ func getShow(c echo.Context) error {
 	season := c.Param("season")
 	episode := c.Param("episode")
 
-	vid_list := availableVids()
+	vid_list := availableVids(show, season, episode)
+	if vid_list {
 
-	if vid_list[show] {
-
-		if _, err := strconv.Atoi(season); err == nil {
-			if _, err := strconv.Atoi(episode); err == nil {
-
-				return c.Render(http.StatusOK, "episode_view.html", map[string]interface{}{
-					"show":    show,
-					"season":  season,
-					"episode": episode,
-				})
-			}
-		}
+		return c.Render(http.StatusOK, "episode_view.html", map[string]interface{}{
+			"show":    show,
+			"season":  season,
+			"episode": episode,
+		})
 	}
-	return echo.NewHTTPError(http.StatusNotFound, "404 Video not found")
+	return c.Render(http.StatusNotFound, "404.html", "404 Video not found")
 }
 
 func getJapanese(c echo.Context) error {
@@ -310,6 +295,7 @@ func main() {
 			"tmpl/flashcard.html",
 			"tmpl/container.html",
 			"tmpl/header.html",
+			"tmpl/404.html",
 			"tmpl/episode_view.html",
 			"tmpl/level_selection.html",
 			"tmpl/main.html",
