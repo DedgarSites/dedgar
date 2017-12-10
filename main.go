@@ -288,6 +288,18 @@ func getKanji(c echo.Context) error {
 	return c.Render(http.StatusOK, "flashcard.html", entry)
 }
 
+func custom404Handler(err error, c echo.Context) {
+	code := http.StatusInternalServerError
+	if he, ok := err.(*echo.HTTPError); ok {
+		code = he.Code
+	}
+	errorPage := fmt.Sprintf("%d.html", code)
+	if err := c.Render(code, errorPage, code); err != nil {
+		c.Logger().Error(err)
+	}
+	c.Logger().Error(err)
+}
+
 func main() {
 	t := &Template{
 		templates: template.Must(template.ParseFiles("tmpl/map.html",
@@ -305,6 +317,7 @@ func main() {
 	e := echo.New()
 	e.Static("/", "static")
 	e.Renderer = t
+	e.HTTPErrorHandler = custom404Handler
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.GET("/", getMain)
