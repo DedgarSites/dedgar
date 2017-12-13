@@ -30,6 +30,7 @@ func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Con
 	return t.templates.ExecuteTemplate(w, name, data)
 }
 
+// only return true if the url maps to a file in our specific hierarchy
 func availableVids(show string, season string, episode string) bool {
 	if _, err := os.Stat("./static/vid/" + show + "/" + season + "/" + episode + ".mp4"); err == nil {
 		return true
@@ -169,7 +170,6 @@ func getKanji(c echo.Context) error {
 
 	defer rows.Close()
 
-	//var otherkanj []string
 	other_kanj := make(map[string]int)
 	kanj_index := make(map[int]string)
 
@@ -185,14 +185,9 @@ func getKanji(c echo.Context) error {
 		var jlpt string
 		var school string
 
-		//		if err := rows.Scan(&kanj, &von, &vkun, &transl, &roma, &rememb, &jlpt, &school); err != nil {
-		//			log.Fatal(err)
-		//		}
-
 		switch err := rows.Scan(&kanj, &von, &vkun, &transl, &roma, &rememb, &jlpt, &school); err {
 		case sql.ErrNoRows:
-			// use a 404 here
-			fmt.Println("No rows were returned!")
+			return c.Render(http.StatusNotFound, "404.html", "No rows were found")
 		case nil:
 			//fmt.Println(kanj, von, vkun, transl, roma, rememb, jlpt, school)
 		default:
@@ -284,10 +279,11 @@ func getKanji(c echo.Context) error {
 		"u_selection": u_selection,
 	}
 
-	// do some regex checking on values of :level and :selection
+	// TODO regex checking on values of :level and :selection
 	return c.Render(http.StatusOK, "flashcard.html", entry)
 }
 
+// handle any error by attempting to render a custom page for it
 func custom404Handler(err error, c echo.Context) {
 	code := http.StatusInternalServerError
 	if he, ok := err.(*echo.HTTPError); ok {
@@ -318,6 +314,7 @@ func main() {
 	e.Static("/", "static")
 	e.Renderer = t
 	e.HTTPErrorHandler = custom404Handler
+	e.Pre(middleware.HTTPSWWWRedirect())
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.GET("/", getMain)
@@ -329,5 +326,5 @@ func main() {
 	e.GET("/kanjitainer/", getContainer)
 	e.GET("/kanji/:selection/:level", getLevel)
 	e.GET("/kanji/:selection/:level/:kanji", getKanji)
-	e.Logger.Info(e.Start(":8080"))
+	e.Logger.Info(e.StartAutoTLS(":443"))
 }
