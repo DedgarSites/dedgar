@@ -296,6 +296,10 @@ func custom404Handler(err error, c echo.Context) {
 	c.Logger().Error(err)
 }
 
+func getCert(c echo.Context) error {
+	return c.String(http.StatusOK, "success")
+}
+
 func main() {
 	t := &Template{
 		templates: template.Must(template.ParseFiles("tmpl/map.html",
@@ -326,5 +330,7 @@ func main() {
 	e.GET("/kanjitainer/", getContainer)
 	e.GET("/kanji/:selection/:level", getLevel)
 	e.GET("/kanji/:selection/:level/:kanji", getKanji)
+	e.GET("/.well-known/acme-challenge/test", getCert)
+	e.GET("/.well-known/acme-challenge/test/", getCert)
 	e.Logger.Info(e.StartAutoTLS(":443"))
 }
