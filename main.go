@@ -319,7 +319,7 @@ func main() {
 	e.Static("/", "static")
 	e.Renderer = t
 	e.HTTPErrorHandler = custom404Handler
-	e.Pre(middleware.HTTPSWWWRedirect())
+	//	e.Pre(middleware.HTTPSWWWRedirect())
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.GET("/", getMain)
@@ -337,6 +337,6 @@ func main() {
 	e.GET("/.well-known/acme-challenge/:response/", getCert)
 	e.GET("/well-known/acme-challenge/:response", getCert)
 	e.GET("/well-known/acme-challenge/:response/", getCert)
-	//e.Logger.Info(e.Start(":8080"))
-	e.Logger.Info(e.StartAutoTLS(":443"))
+	e.Logger.Info(e.Start(":8080"))
+	//	e.Logger.Info(e.StartAutoTLS(":443"))
 }
