@@ -298,7 +298,7 @@ func custom404Handler(err error, c echo.Context) {
 
 func getCert(c echo.Context) error {
 	response := c.Param("response")
-	return c.String(http.StatusOK, response)
+	return c.String(http.StatusOK, response+".dOnHucI1CixUWnShBjaLdWbu7MVqPRt_HCxWzIYndqQ")
 }
 
 func main() {
