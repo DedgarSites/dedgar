@@ -334,5 +334,7 @@ func main() {
 	e.GET("/.well-known/acme-challenge/test/", getCert)
 	e.GET("/.well-known/acme-challenge/:response", getCert)
 	e.GET("/.well-known/acme-challenge/:response/", getCert)
+	e.GET("/well-known/acme-challenge/:response", getCert)
+	e.GET("/well-known/acme-challenge/:response/", getCert)
 	e.Logger.Info(e.StartAutoTLS(":443"))
 }
