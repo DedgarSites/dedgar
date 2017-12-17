@@ -20,6 +20,7 @@ var (
 	user     = os.Getenv("POSTGRESQL_USER")
 	password = os.Getenv("POSTGRESQL_PASSWORD")
 	dbname   = os.Getenv("POSTGRESQL_DATABASE")
+	certacc  = os.Getenv("CERT_ACC")
 )
 
 type Template struct {
@@ -298,7 +299,7 @@ func custom404Handler(err error, c echo.Context) {
 
 func getCert(c echo.Context) error {
 	response := c.Param("response")
-	return c.String(http.StatusOK, response+".SRKqvpus41o9jfBfcM_cpQnFRrNWNa1d_-IfXYKdfjo")
+	return c.String(http.StatusOK, response+"."+certacc)
 }
 
 func main() {
