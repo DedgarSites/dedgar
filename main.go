@@ -302,6 +302,12 @@ func getCert(c echo.Context) error {
 	return c.String(http.StatusOK, response+"."+certacc)
 }
 
+// GET /post/:postname"
+func getPost(c echo.Context) error {
+	post_file := c.Param("tmpl" + "postname" + ".html")
+	return c.Render(http.StatusOK, post_file, c.Param("postname"))
+}
+
 func main() {
 	t := &Template{
 		templates: template.Must(template.ParseFiles("tmpl/map.html",
@@ -324,6 +330,7 @@ func main() {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.GET("/", getMain)
+	e.GET("/post/:postname", getPost)
 	e.GET("/watch/:show/:season/:episode", getShow)
 	//	e.GET("/grade/:level", getLevel)
 	e.GET("/kanji", getJapanese)
