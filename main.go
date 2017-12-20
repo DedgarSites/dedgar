@@ -3,15 +3,18 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
-	_ "github.com/lib/pq"
 	"html/template"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
+	_ "github.com/lib/pq"
 )
 
 var (
@@ -22,14 +25,6 @@ var (
 	dbname   = os.Getenv("POSTGRESQL_DATABASE")
 	certacc  = os.Getenv("CERT_ACC")
 )
-
-type Template struct {
-	templates *template.Template
-}
-
-func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-	return t.templates.ExecuteTemplate(w, name, data)
-}
 
 // only return true if the url maps to a file in our specific hierarchy
 func availableVids(show string, season string, episode string) bool {
@@ -304,23 +299,35 @@ func getCert(c echo.Context) error {
 
 // GET /post/:postname"
 func getPost(c echo.Context) error {
-	post_file := c.Param("tmpl" + "postname" + ".html")
-	return c.Render(http.StatusOK, post_file, c.Param("postname"))
+	post_file := c.Param("postname")
+	return c.Render(http.StatusOK, post_file+".html", post_file)
+}
+
+type Template struct {
+	templates *template.Template
+}
+
+func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
+	return t.templates.ExecuteTemplate(w, name, data)
 }
 
 func main() {
 	t := &Template{
-		templates: template.Must(template.ParseFiles("tmpl/map.html",
-			"tmpl/kanji_list.html",
-			"tmpl/flashcard.html",
-			"tmpl/container.html",
-			"tmpl/header.html",
-			"tmpl/404.html",
-			"tmpl/episode_view.html",
-			"tmpl/level_selection.html",
-			"tmpl/main.html",
-			"tmpl/footer.html",
-		)),
+		templates: func() *template.Template {
+			templ := template.New("")
+			if err := filepath.Walk("./tmpl", func(path string, info os.FileInfo, err error) error {
+				if strings.Contains(path, ".html") {
+					_, err = templ.ParseFiles(path)
+					if err != nil {
+						log.Println(err)
+					}
+				}
+				return err
+			}); err != nil {
+				panic(err)
+			}
+			return templ
+		}(),
 	}
 	e := echo.New()
 	e.Static("/", "static")

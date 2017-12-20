@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+{{template "header.html"}}
+<html lang="en">
+<head>
+    <title>dedgarpost</title>
+</head>
+<body>
+The golang <a href="https://golang.org/pkg/net/http/">http</a> package is great for simple websites with static pages, but is pretty light on routing functionality out of the box. I was looking at adding dynamic routing while still keeping things as efficient as possible, and add only what functionality I needed for this particular website project.
+
+I took an interest in <a href="https://github.com/labstack/echo">echo</a> after comparing benchmarks of various go-based web frameworks and routers. It's built for speed with radix tree based route lookup, but it doesn't have built-in regexp support. That can be worked around with its match-any and adding your regexp checking in the route's handler, as I'll detail in the examples.
+
+Let's get started!
+
+&nbsp;
+
+<!--more-->
+
+<hr />
+
+<h3>Part 1, simple routing operations</h3>
+You'll first need to fetch the up to date code for echo:
+<pre>go get -u github.com/labstack/echo/
+</pre>
+Now, cd to your $GOPATH and make a new directory. Inside, create a new main.go file. We'll start with the imports for the main package:
+<pre>package main
+
+import (
+"github.com/labstack/echo"
+"net/http"
+)
+</pre>
+Not much needed here, we have echo, and then the net/http package that we'll use to return an 'http.StatusOK' from our handler functions.
+
+Next, in our main function, we declare an instance of the echo router, specify the route and handler we wish to use, then finally start the router and logger on the unprivileged port 8080.
+<pre>func main() {
+  e := echo.New()
+  e.GET("/watch/:show/:season/:episode", getShow)
+  e.Logger.Fatal(e.Start(":8080"))
+}
+</pre>
+Now we have our handler getShow, where we are grabbing one parameter passed in from the router. If you plan on having many handlers, it's nice to have a comment detailing what route is being handled. Like so:
+<pre>// GET /watch/&lt;anything&gt;/&lt;anything&gt;/&lt;anything&gt;
+func getShow(c echo.Context) error {
+  episode := c.Param("episode")
+
+  return c.String(http.StatusOK, episode)
+}
+</pre>
+Any parameter specified in your main router function as /:some-param/ can be accessed through the echo Context with c.Param(some-param). The return value is the String value of :episode in this example.
+
+Save the file and run your code with 'go run main.go'. You should be greeted with some ASCII art in your terminal window similar to the following:
+<pre>  / __/___/ /  ___
+ / _// __/ _ \/ _ \
+/___/\__/_//_/\___/ v3.2.5
+High performance, minimalist Go web framework
+https://echo.labstack.com
+____________________________________O/_______
+                                    O\
+⇨ http server started on [::]:8080
+
+</pre>
+Great! Now you can view the code in action at 'localhost:8080/watch/anything/anything/anything'
+
+for example: localhost:8080/watch/show-name/season2/episode5
+
+Our simple implementation will look like this when completed:
+<pre>package main
+
+import ( 
+  "github.om/labstack/echo"
+  "net/http"
+)
+
+// GET /watch/&lt;anything&gt;/&lt;anything&gt;/&lt;anything&gt;
+func getShow(c echo.Context) error {
+  episode := c.Param("episode")
+
+  return c.String(http.StatusOK, episode)
+}
+
+func main() {
+  e := echo.New()
+  e.GET("/watch/:show/:season/:episode", getShow)
+  e.Logger.Fatal(e.Start(":8080"))
+}</pre>
+Yay, functional routing! But what if you want to return multiple values from multiple parameters in your handler? Or use pre-formatted HTML templates that use CSS or JavaScript? We can do that, too! Let's move on to a more practical example.
+
+<hr />
+
+<h3>Part 2, routing with formatted pages</h3>
+Now, it's time to add some more complexity to what we already have. To get some prerequisites out of the way, create a new directory named 'tmpl'. Inside that directory, create two files named 'episode_view.html' and 'main_view.html'. Here, we have the content of episode_view.html:
+<pre>&lt;!DOCTYPE html&gt;
+&lt;body class="main-body"&gt;
+ &lt;div class="container"&gt;
+   &lt;div class="row"&gt;
+     &lt;div class="hero-text"&gt;
+       &lt;h1&gt;\{\{.show\}\} Season \{\{.season\}\} Episode \{\{.episode\}\}&lt;/h1&gt;
+         &lt;h2&gt;Click to play&lt;/h2&gt;
+         &lt;video width="320" height="240" controls&gt;
+           &lt;source src="/vid/\{\{.show\}\}_\{\{.season\}\}_\{\{.episode\}\}.mp4" type="video/mp4"&gt;
+         Your browser does not support the video tag.
+         &lt;/video&gt;
+       &lt;p&gt;placeholder text for vars&lt;/p&gt;
+     &lt;/div&gt;
+   &lt;/div&gt;
+ &lt;/div&gt;
+&lt;/body&gt;
+</pre>
+And here we have the content of main_view.html
+<pre>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+ &lt;body&gt;
+   &lt;h1&gt;Main View&lt;/h1&gt;
+   &lt;p&gt;main view handler directs here.&lt;/p&gt;
+ &lt;/body&gt;
+&lt;/html&gt;
+</pre>
+Then, make sure you have the latest echo middleware package. It can be installed as easily as the router:
+<pre>go get -u github.com/labstack/echo/middleware
+</pre>
+Now that we have the prerequisites out of the way, open up your main.go file.
+Starting again with the imports to the main package, we have but a few more additions. The html/template package is where most of our added functionality comes from this time around. It's almost identical in usage to text/template, but the output is sanitized for security reasons against things like possible code injection attacks. We also import the io package for use during template rendering, and echo middleware for some extra feedback from our running application. This becomes more useful later on with debugging issues in increasingly complex applications, and is generally handy to have around to help discover issues of which you might not have otherwise been aware.
+<pre>package main
+
+import (
+	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
+	"html/template"
+	"io"
+	"net/http"
+)
+</pre>
+This time around, we have two things to declare in order to implement echo's renderer. The first is a struct that holds a pointer to a Template. The second is a func that will write the data received from the handler to the template to produce the finished product.
+<pre>type Template struct {
+	templates *template.Template
+}
+
+func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
+	return t.templates.ExecuteTemplate(w, name, data)
+}
+</pre>
+Next is our main function, where we specify our routes, enable the middleware, and start up our router. Of special note this time is the implementation of templates which we use as our echo renderer. This is done to ensure the templates are all parsed and loaded ahead of time, so once we start listening for HTTP requests, we already have everything we need in memory. We'll specify which templates we wish to use inside of the handlers themselves when we get to them.
+<pre>func main() {
+	t := &amp;Template{
+          templates: template.Must(template.ParseFiles("tmpl/main_view.html",
+            "tmpl/episode_view.html",
+          )),
+	}
+	e := echo.New()
+	e.Static("/", "static")
+	e.Renderer = t
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
+	e.GET("/", getMain)
+	e.GET("/watch/:show/:season/:episode", getShow)
+	e.Logger.Info(e.Start(":8080"))
+}
+</pre>
+You can also choose to parse an entire directory of matching files instead of specifying them manually, if you prefer:
+<pre>  t := &amp;Template{
+    templates: template.Must(template.ParseGlob("tmpl/*.html")),
+  }
+</pre>
+And at last, we have our two handlers. We Render takes 3 arguments, an HTTP status for the route, the name of the template we wish to parse, and the data that we extract from the echo Context's parameters. For the getMain handler, we don't need to extract any parameters since it's going to be a static page.
+<pre>// GET /watch/:show/:season/:episode
+func getShow(c echo.Context) error {
+	show := c.Param("show")
+	season := c.Param("season")
+	episode := c.Param("episode")
+
+	return c.Render(http.StatusOK, "episode_view.html", map[string]interface{}{
+		"show":    show,
+		"season":  season,
+		"episode": episode,
+	})
+}
+
+// GET /
+func getMain(c echo.Context) error {
+	return c.Render(http.StatusOK, "main_view.html", "main")
+}
+</pre>
+And our finished product will look like this:
+<pre>package main
+
+import (
+	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
+	"html/template"
+	"io"
+	"net/http"
+)
+
+type Template struct {
+	templates *template.Template
+}
+
+func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
+	return t.templates.ExecuteTemplate(w, name, data)
+}
+
+// GET /watch/:show/:season/:episode
+func getShow(c echo.Context) error {
+	show := c.Param("show")
+	season := c.Param("season")
+	episode := c.Param("episode")
+
+	return c.Render(http.StatusOK, "episode_view.html", map[string]interface{}{
+		"show":    show,
+		"season":  season,
+		"episode": episode,
+	})
+}
+
+func getMain(c echo.Context) error {
+	return c.Render(http.StatusOK, "main_view.html", "main")
+}
+
+func main() {
+	t := &amp;Template{
+		templates: template.Must(template.ParseGlob("tmpl/*.html")),
+	}
+	e := echo.New()
+	e.Static("/", "static")
+	e.Renderer = t
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
+	e.GET("/", getMain)
+	e.GET("/watch/:show/:season/:episode", getShow)
+	e.Logger.Info(e.Start(":8080"))
+}
+
+</pre>
+Now you can write your changes, and start up the new server with 'go run main.go'. Once you see the echo router graphic from earlier show up in your terminal, you're ready to test out a route. Navigate to 'localhost:8080/watch/some-show/season1/episode1' from your browser and take a look at the finished page! This router will accept any traffic to 'localhost:8080/', or 'localhost:8080/watch/anything/anything/anything', so feel free to experiment.
+
+Next time, we'll get a kubernetes template created to deploy a containerized version of our application to the cloud with OpenShift.
+</body>
+{{template "footer.html"}}
+</html>
