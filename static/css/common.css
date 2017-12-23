@@ -36,8 +36,6 @@ div,h1,h2,h3,h4,h5,h6,p,dl,dt,dd,ol,ul,li,form,input,textarea,button,table,tr,th
    box-sizing: border-box;
 }
 img {max-width: 100%;height: auto;vertical-align: bottom}
-iframe.twitter-share-button {width: 110px!important;}
-iframe[src*="www.facebook.com/plugins/like.php"]{width:115px !important;}
 
 /*ãƒ†ãƒ³ãƒ—ãƒ¬ãƒ¼ãƒˆ ã“ã“ã¾ã§///////////////////////////////////////////////*/
 /*################################################################################*/
@@ -151,7 +149,3 @@ media query
    .brSmp { display: inline;}
    
 }
-
-
-
-

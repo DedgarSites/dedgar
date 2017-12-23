@@ -27,6 +27,7 @@ var (
 )
 
 // only return true if the url maps to a file in our specific hierarchy
+// can be replaced with a
 func availableVids(show string, season string, episode string) bool {
 	if _, err := os.Stat("./static/vid/" + show + "/" + season + "/" + episode + ".mp4"); err == nil {
 		return true
@@ -34,10 +35,12 @@ func availableVids(show string, season string, episode string) bool {
 	return false
 }
 
+// GET /
 func getMain(c echo.Context) error {
 	return c.Render(http.StatusOK, "main.html", "main")
 }
 
+// GET kanjitainer
 func getContainer(c echo.Context) error {
 	return c.Render(http.StatusOK, "container.html", "container")
 }
@@ -60,6 +63,7 @@ func getShow(c echo.Context) error {
 	return c.Render(http.StatusNotFound, "404.html", "404 Video not found")
 }
 
+// GET /kanji
 func getJapanese(c echo.Context) error {
 	return c.Render(http.StatusOK, "level_selection.html", "level_selection")
 }
@@ -192,7 +196,6 @@ func getKanji(c echo.Context) error {
 
 		other_kanj[kanj] = k_index
 		kanj_index[k_index] = kanj
-		//otherkanj = append(otherkanj, kanj)
 		k_index++
 	}
 
@@ -297,10 +300,29 @@ func getCert(c echo.Context) error {
 	return c.String(http.StatusOK, response+"."+certacc)
 }
 
-// GET /post/:postname"
+// GET /post/:postname
 func getPost(c echo.Context) error {
 	post_file := c.Param("postname")
 	return c.Render(http.StatusOK, post_file+".html", post_file)
+}
+
+// GET /contact
+func getContact(c echo.Context) error {
+	return c.Render(http.StatusOK, "contact.html", nil)
+}
+
+type Message struct {
+	Name    string //`json:"name" form:"name"`
+	Email   string //`json:"email" form:"email"`
+	Message string //`json:"message" form:"message"`
+}
+
+// POST /post-contact
+func postContact(c echo.Context) error {
+	//	c.Request.ParseMultipartForm()
+	name := c.FormValue("name")
+	fmt.Println("this is the full context", name)
+	return c.String(http.StatusOK, name)
 }
 
 type Template struct {
@@ -316,7 +338,7 @@ func main() {
 		templates: func() *template.Template {
 			templ := template.New("")
 			if err := filepath.Walk("./tmpl", func(path string, info os.FileInfo, err error) error {
-				if strings.Contains(path, ".html") {
+				if strings.HasSuffix(path, ".html") {
 					_, err = templ.ParseFiles(path)
 					if err != nil {
 						log.Println(err)
@@ -337,6 +359,8 @@ func main() {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.GET("/", getMain)
+	e.GET("/contact", getContact)
+	e.POST("/post-contact", postContact)
 	e.GET("/post/:postname", getPost)
 	e.GET("/watch/:show/:season/:episode", getShow)
 	//	e.GET("/grade/:level", getLevel)
