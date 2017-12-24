@@ -164,10 +164,6 @@ $(function(){
     cEffectEnd();
 });
 
-function formSubmitted() {
-    alert("The form was submitted");
-}
-
 //リサイズ処理まとめ
 function xResize(){
     $(function(){

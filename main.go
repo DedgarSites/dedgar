@@ -311,7 +311,7 @@ func getContact(c echo.Context) error {
 	return c.Render(http.StatusOK, "contact.html", nil)
 }
 
-type Message struct {
+type Contact struct {
 	Name    string //`json:"name" form:"name"`
 	Email   string //`json:"email" form:"email"`
 	Message string //`json:"message" form:"message"`
@@ -320,9 +320,10 @@ type Message struct {
 // POST /post-contact
 func postContact(c echo.Context) error {
 	//	c.Request.ParseMultipartForm()
-	name := c.FormValue("name")
-	fmt.Println("this is the full context", name)
-	return c.String(http.StatusOK, name)
+	fmt.Println(c.FormValue("name"))
+	fmt.Println(c.FormValue("email"))
+	fmt.Println(c.FormValue("message"))
+	return c.String(http.StatusOK, "Form submitted")
 }
 
 type Template struct {
