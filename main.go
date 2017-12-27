@@ -24,7 +24,22 @@ var (
 	password = os.Getenv("POSTGRESQL_PASSWORD")
 	dbname   = os.Getenv("POSTGRESQL_DATABASE")
 	certacc  = os.Getenv("CERT_ACC")
+	postmap  = make(map[string]string)
 )
+
+type Contact struct {
+	Name    string //`json:"name" form:"name"`
+	Email   string //`json:"email" form:"email"`
+	Message string //`json:"message" form:"message"`
+}
+
+type Template struct {
+	templates *template.Template
+}
+
+func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
+	return t.templates.ExecuteTemplate(w, name, data)
+}
 
 // only return true if the url maps to a file in our specific hierarchy
 // can be replaced with a
@@ -300,21 +315,19 @@ func getCert(c echo.Context) error {
 	return c.String(http.StatusOK, response+"."+certacc)
 }
 
-// GET /post/:postname
-func getPost(c echo.Context) error {
-	post_file := c.Param("postname")
-	return c.Render(http.StatusOK, post_file+".html", post_file)
-}
-
 // GET /contact
 func getContact(c echo.Context) error {
 	return c.Render(http.StatusOK, "contact.html", nil)
 }
 
-type Contact struct {
-	Name    string //`json:"name" form:"name"`
-	Email   string //`json:"email" form:"email"`
-	Message string //`json:"message" form:"message"`
+// GET /privacy
+func getPrivacy(c echo.Context) error {
+	return c.Render(http.StatusOK, "privacy.html", nil)
+}
+
+// GET /dev
+func getDev(c echo.Context) error {
+	return c.Render(http.StatusOK, "dev.html", nil)
 }
 
 // POST /post-contact
@@ -326,21 +339,37 @@ func postContact(c echo.Context) error {
 	return c.String(http.StatusOK, "Form submitted")
 }
 
-type Template struct {
-	templates *template.Template
+// GET /post/:postname
+func getPost(c echo.Context) error {
+	post := c.Param("postname")
+	if _, ok := postmap[post]; ok {
+		return c.Render(http.StatusOK, post+".html", post)
+	}
+	return c.Render(http.StatusNotFound, "404.html", "404 Post not found")
 }
 
-func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-	return t.templates.ExecuteTemplate(w, name, data)
+func findPosts(dirpath string) map[string]string {
+	if err := filepath.Walk(dirpath, func(path string, info os.FileInfo, err error) error {
+		if strings.HasSuffix(path, ".html") {
+			postmap[filepath.Base(strings.Split(path, ".html")[0])] = path
+			if err != nil {
+				log.Println(err)
+			}
+		}
+		return err
+	}); err != nil {
+		panic(err)
+	}
+	return postmap
 }
 
 func main() {
 	t := &Template{
 		templates: func() *template.Template {
-			templ := template.New("")
+			tmpl := template.New("")
 			if err := filepath.Walk("./tmpl", func(path string, info os.FileInfo, err error) error {
 				if strings.HasSuffix(path, ".html") {
-					_, err = templ.ParseFiles(path)
+					_, err = tmpl.ParseFiles(path)
 					if err != nil {
 						log.Println(err)
 					}
@@ -349,7 +378,7 @@ func main() {
 			}); err != nil {
 				panic(err)
 			}
-			return templ
+			return tmpl
 		}(),
 	}
 	e := echo.New()
@@ -361,8 +390,12 @@ func main() {
 	e.Use(middleware.Recover())
 	e.GET("/", getMain)
 	e.GET("/contact", getContact)
+	e.GET("/privacypolicy", getPrivacy)
+	e.GET("/privacy", getPrivacy)
+	e.GET("/dev", getDev)
 	e.POST("/post-contact", postContact)
 	e.GET("/post/:postname", getPost)
+	e.GET("/posts/:postname", getPost)
 	e.GET("/watch/:show/:season/:episode", getShow)
 	//	e.GET("/grade/:level", getLevel)
 	e.GET("/kanji", getJapanese)
