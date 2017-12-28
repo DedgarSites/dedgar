@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+{{template "header.html"}}
+
+<a href="http://openshift.com">OpenShift</a> uses Kubernetes orchestration to manage a variety of container types inside pods, and run them in a public or dedicated cloud cloud environment. It includes support for Docker containers, which we'll be using in this example. Applications can be made HA (High Availability) by running multiple instances of your application in parallel connected by an OpenShift service, and can scale up or down appropriately in response to changing traffic loads. In this case, our container will be running independently, but applications can be integrated with other services, persistent storage such as databases, which I will be covering in a future post.
+
+&nbsp;
+
+Now on to the code!
+
+<!--more-->
+
+In this tutorial we'll be containerizing our golang application from a previous post, <a href="/golang-echo-router-example">/golang-echo-router-example.</a> So be sure to check that out if you haven't already.
+
+To build a docker container, we first need a Dockerfile. This will contain steps for:
+<ul>
+ 	<li>installing any packages we may need inside the container</li>
+ 	<li>setting our go related environment variables</li>
+ 	<li>create a directory to store the application data</li>
+ 	<li>use go-wrapper to depsolve and handle the 'go get' and 'go install' steps automatically</li>
+ 	<li>open the port the container will use to accept incoming traffic</li>
+ 	<li>declare which user will be used to run the container: 1001 is the default unprivileged user in the openshift/centos7 base image</li>
+</ul>
+All of which are prerequisites to running our application on a traditional host machine. In some cases, you may just want to use  'FROM golang:1.9' or 'FROM golang:latest' which allows you to skip many of the steps in the below Dockerfile. The downside is that it ties you to to that particular image, and you may already have a base image inside of which you wish to also compile and run go code. You can save the following code as 'Dockerfile' with no file extension:
+<pre>FROM openshift/base-centos7
+
+RUN yum install -y golang &amp;&amp; \
+    yum clean all
+
+ENV GOLANG_VERSION=1.9 \
+    GOPATH=/go
+
+ENV PATH=$GOPATH/bin:/usr/local/go/bin:$PATH
+
+COPY go-wrapper /usr/local/bin/
+
+RUN mkdir -p /go/src/github.com/openshift/echodev
+WORKDIR /go/src/github.com/openshift/echodev
+
+COPY . /go/src/github.com/openshift/echodev
+RUN go-wrapper download &amp;&amp; go-wrapper install
+
+EXPOSE 8080
+
+USER 1001
+
+CMD ["go-wrapper", "run"]
+</pre>
+This way, we're not dependent on the golang image itself. With this method, you can have the added security of using only the images you build in-house. Though in this example we're just going to use the openshift/centos7-base image.
+
+Next we have our OpenShift application template, which will look very similar to Kubernetes application templates. This contains all the configuration needed to create our Service, Route, Image Stream, Build Config, and Deployment Config. This example is using YAML formatting, but JSON formatting is also supported. This can be convenient for automated deployments with Ansible, which I'll also cover in a later post.
+
+Our template contains the following sections:
+<ul>
+ 	<li>Service # specifies the port the application will use to listen for traffic.</li>
+ 	<li>ImageStream # used to identify the application  source and provide new images when available.</li>
+ 	<li>Route # specify we wish to connect to the Service echodev, and the hostname for the Service.</li>
+ 	<li>BuildConfig # contains information on how to build the code, and the source repo hosting the code.</li>
+ 	<li>DeploymentConfig # how the application should behave once it's launched, how many replicas to run, and how to deploy newer versions.</li>
+</ul>
+<pre>---
+kind: Template
+apiVersion: v1
+metadata:
+  name: echodev
+  annotations:
+    description: Echo dev site deployment, written in Golang
+    tags: quickstart,golang,echo
+    iconClass: icon-golang
+labels:
+  template: echodev
+objects:
+- kind: Service
+  apiVersion: v1
+  metadata:
+    name: echodev
+    annotations:
+      description: Exposes and load balances the application pods
+  spec:
+    ports:
+    - name: web
+      port: 8080
+      targetPort: 8080
+    selector:
+      name: echodev
+- kind: Route
+  apiVersion: v1
+  metadata:
+    name: echodev
+  spec:
+    host: "${APPLICATION_DOMAIN}"
+    to:
+      kind: Service
+      name: echodev
+- kind: ImageStream
+  apiVersion: v1
+  metadata:
+    name: echodev
+    annotations:
+      description: Keeps track of changes in the application image
+- kind: BuildConfig
+  apiVersion: v1
+  metadata:
+    name: echodev
+    annotations:
+      description: Defines how to build the application
+  spec:
+    source:
+      type: Git
+      git:
+        uri: "${SOURCE_REPOSITORY_URL}"
+        ref: "${SOURCE_REPOSITORY_REF}"
+      contextDir: "${CONTEXT_DIR}"
+    strategy:
+      type: Docker
+    output:
+      to:
+        kind: ImageStreamTag
+        name: echodev:latest
+    triggers:
+    - type: ConfigChange
+    - type: GitHub
+      github:
+        secret: "${GITHUB_WEBHOOK_SECRET}"
+    postCommit:
+      script: go test -v ./...
+- kind: DeploymentConfig
+  apiVersion: v1
+  metadata:
+    name: echodev
+    annotations:
+      description: Defines how to deploy the application server
+  spec:
+    strategy:
+      type: Recreate
+    triggers:
+    - type: ImageChange
+      imageChangeParams:
+        automatic: true
+        containerNames:
+        - shinobu
+        from:
+          kind: ImageStreamTag
+          name: echodev:latest
+    - type: ConfigChange
+    replicas: 1
+    selector:
+      name: echodev
+    template:
+      metadata:
+        name: echodev
+        labels:
+          name: echodev
+      spec:
+        containers:
+        - name: echodev
+          image: echodev
+          ports:
+          - containerPort: 8080
+parameters:
+- name: SOURCE_REPOSITORY_URL
+  description: The URL of the repository with your application source code
+  value: https://github.com/xshinobu/echodev
+- name: SOURCE_REPOSITORY_REF
+  description: Set this to a branch name, tag or other ref of your repository if you
+    are not using the default branch
+- name: CONTEXT_DIR
+  description: Set this to the relative path to your project if it is not in the root
+    of your repository
+- name: APPLICATION_DOMAIN
+  description: The exposed hostname that will route to the Beego service
+  value: ''
+- name: GITHUB_WEBHOOK_SECRET
+  description: A secret string used to configure the GitHub webhook
+  generate: expression
+  from: "[a-zA-Z0-9]{40}"
+</pre>
+Next, we have a handy little script from the official docker golang repo. This handles the 'go get' and 'go install' steps automatically to make sure all of our prerequisites are installed for us (Neat!).  The latest version can always be found <a href="https://github.com/docker-library/golang/blob/master/go-wrapper">here on github</a>. You can save the following as 'go-wrapper', which also has no file extension:
+<pre>
+    #!/bin/sh
+    set -e
+
+    usage() {
+      base="$(basename "$0")"
+      cat &lt;&amp;2
+      exit 1
+    fi
+    # "shift" so that "$@" becomes the remaining arguments and can be passed along to other "go" subcommands easily
+    cmd="$1"
+    shift
+
+    goDir="$(go list -e -f '{{.ImportComment}}' 2&gt;/dev/null || true)"
+
+    if [ -z "$goDir" -a -s .godir ]; then
+      goDir="$(cat .godir)"
+    fi
+
+    dir="$(pwd -P)"
+    if [ "$goDir" ]; then
+      goPath="${GOPATH%%:*}" # this just grabs the first path listed in GOPATH, if there are multiple (which is the detection logic "go get" itself uses, too)
+      goDirPath="$goPath/src/$goDir"
+      mkdir -p "$(dirname "$goDirPath")"
+      if [ ! -e "$goDirPath" ]; then
+        ln -sfv "$dir" "$goDirPath"
+      elif [ ! -L "$goDirPath" ]; then
+        echo &gt;&amp;2 "error: $goDirPath already exists but is unexpectedly not a symlink!"
+        exit 1
+      fi
+      goBin="$goPath/bin/$(basename "$goDir")"
+    else
+      goBin="$(basename "$dir")" # likely "app"
+    fi
+
+    case "$cmd" in
+      download)
+        set -- go get -v -d "$@"
+        if [ "$goDir" ]; then set -- "$@" "$goDir"; fi
+        set -x; exec "$@"
+        ;;
+        
+      install)
+        set -- go install -v "$@"
+        if [ "$goDir" ]; then set -- "$@" "$goDir"; fi
+        set -x; exec "$@"
+        ;;
+        
+      run)
+        set -x; exec "$goBin" "$@"
+        ;;
+        
+      *)
+        echo &gt;&amp;2 'error: unknown command:' "$cmd"
+        usage &gt;&amp;2
+        exit 1
+        ;;
+    esac
+</pre>
+{{template "footer.html"}}

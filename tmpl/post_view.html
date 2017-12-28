@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+{{template "header.html"}}
+<body>
+    <ul id="postlist">
+    {{ range $key, $value := . }}
+        <li><strong>{{ $key }}</strong>: {{ $value }}</li>
+    {{ end }}
+    </ul>
+</body>
+{{template "footer.html"}}

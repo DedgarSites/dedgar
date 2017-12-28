@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"database/sql"
 	"fmt"
 	"html/template"
@@ -332,7 +334,6 @@ func getDev(c echo.Context) error {
 
 // POST /post-contact
 func postContact(c echo.Context) error {
-	//	c.Request.ParseMultipartForm()
 	fmt.Println(c.FormValue("name"))
 	fmt.Println(c.FormValue("email"))
 	fmt.Println(c.FormValue("message"))
@@ -348,10 +349,41 @@ func getPost(c echo.Context) error {
 	return c.Render(http.StatusNotFound, "404.html", "404 Post not found")
 }
 
-func findPosts(dirpath string) map[string]string {
+// GET /post
+func getPostView(c echo.Context) error {
+	return c.Render(http.StatusOK, "post_view.html", postmap)
+}
+
+func findSummary(fpath string) string {
+	file, err := os.Open(fpath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	var buffer bytes.Buffer
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		buffer.WriteString(line)
+		if line == "<!--more-->" {
+			break
+		}
+		//fmt.Println(scanner.Text())
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+	return buffer.String()
+}
+
+func findPosts(dirpath string, extension string) map[string]string {
 	if err := filepath.Walk(dirpath, func(path string, info os.FileInfo, err error) error {
-		if strings.HasSuffix(path, ".html") {
-			postmap[filepath.Base(strings.Split(path, ".html")[0])] = path
+		if strings.HasSuffix(path, extension) {
+			summary := findSummary(path)
+			postmap[filepath.Base(strings.Split(path, extension)[0])] = summary
 			if err != nil {
 				log.Println(err)
 			}
@@ -388,12 +420,18 @@ func main() {
 	//	e.Pre(middleware.HTTPSWWWRedirect())
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	findPosts("./tmpl/posts", ".html")
+	//fmt.Println(findPosts("./tmpl/posts", ".html"))
 	e.GET("/", getMain)
 	e.GET("/contact", getContact)
 	e.GET("/privacypolicy", getPrivacy)
 	e.GET("/privacy", getPrivacy)
 	e.GET("/dev", getDev)
 	e.POST("/post-contact", postContact)
+	e.GET("/post", getPostView)
+	e.GET("/post/", getPostView)
+	e.GET("/posts", getPostView)
+	e.GET("/posts/", getPostView)
 	e.GET("/post/:postname", getPost)
 	e.GET("/posts/:postname", getPost)
 	e.GET("/watch/:show/:season/:episode", getShow)
