@@ -1,0 +1,5 @@
+The golang http package is great for simple websites with static pages, but is pretty light on routing functionality out of the box. I was looking at adding dynamic routing while still keeping things as efficient as possible, and add only what functionality I needed for this particular website project.
+
+I took an interest in echo after comparing benchmarks of various go-based web frameworks and routers. It's built for speed with radix tree based route lookup, but it doesn't have built-in regexp support. That can be worked around with its match-any and adding your regexp checking in the route's handler, as I'll detail in the examples.
+
+Let's get started!

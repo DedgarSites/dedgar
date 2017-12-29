@@ -367,9 +367,9 @@ func findSummary(fpath string) string {
 	for scanner.Scan() {
 		line := scanner.Text()
 		buffer.WriteString(line)
-		if line == "<!--more-->" {
-			break
-		}
+		//		if line == "<!--more-->" {
+		//			break
+		//		}
 		//fmt.Println(scanner.Text())
 	}
 
@@ -382,8 +382,9 @@ func findSummary(fpath string) string {
 func findPosts(dirpath string, extension string) map[string]string {
 	if err := filepath.Walk(dirpath, func(path string, info os.FileInfo, err error) error {
 		if strings.HasSuffix(path, extension) {
-			summary := findSummary(path)
-			postmap[filepath.Base(strings.Split(path, extension)[0])] = summary
+			postname := strings.Split(path, extension)[0]
+			summary := findSummary(postname + "_summary")
+			postmap[filepath.Base(postname)] = summary
 			if err != nil {
 				log.Println(err)
 			}

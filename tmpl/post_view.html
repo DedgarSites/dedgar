@@ -3,7 +3,7 @@
 <body>
     <ul id="postlist">
     {{ range $key, $value := . }}
-        <li><strong>{{ $key }}</strong>: {{ $value }}</li>
+        <li><a href="/post/{{ $key }}">{{ $key }}</a>: {{ $value }}</li>
     {{ end }}
     </ul>
 </body>

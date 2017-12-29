@@ -188,7 +188,7 @@ Next, we have a handy little script from the official docker golang repo. This h
     cmd="$1"
     shift
 
-    goDir="$(go list -e -f '{{.ImportComment}}' 2&gt;/dev/null || true)"
+    goDir="$(go list -e -f '\{\{.ImportComment\}\}' 2&gt;/dev/null || true)"
 
     if [ -z "$goDir" -a -s .godir ]; then
       goDir="$(cat .godir)"
@@ -196,7 +196,7 @@ Next, we have a handy little script from the official docker golang repo. This h
 
     dir="$(pwd -P)"
     if [ "$goDir" ]; then
-      goPath="${GOPATH%%:*}" # this just grabs the first path listed in GOPATH, if there are multiple (which is the detection logic "go get" itself uses, too)
+      goPath="$\{GOPATH%%:*\}" # this just grabs the first path listed in GOPATH, if there are multiple (which is the detection logic "go get" itself uses, too)
       goDirPath="$goPath/src/$goDir"
       mkdir -p "$(dirname "$goDirPath")"
       if [ ! -e "$goDirPath" ]; then
