@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 {{template "header.html"}}
 <body>
-    <ul id="postlist">
-    {{ range $key, $value := . }}
-        <li><a href="/post/{{ $key }}">{{ $key }}</a>: {{ $value }}</li>
-    {{ end }}
+    <ul id="postlist" style="list-style-type:circle">
+    {{range $key, $value := .}}
+        <li><a href="/post/{{$key}}">{{$key}}</a>: </li>
+    <p>{{$value}}</p>
+    <br>
+    {{end}}
     </ul>
 </body>
 {{template "footer.html"}}

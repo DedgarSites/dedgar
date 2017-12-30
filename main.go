@@ -329,7 +329,7 @@ func getPrivacy(c echo.Context) error {
 
 // GET /dev
 func getDev(c echo.Context) error {
-	return c.Render(http.StatusOK, "dev.html", nil)
+	return c.Render(http.StatusOK, "dev.html", postmap)
 }
 
 // POST /post-contact
