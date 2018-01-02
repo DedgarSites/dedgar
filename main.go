@@ -54,7 +54,7 @@ func availableVids(show string, season string, episode string) bool {
 
 // GET /
 func getMain(c echo.Context) error {
-	return c.Render(http.StatusOK, "main.html", "main")
+	return c.Render(http.StatusOK, "main.html", postmap)
 }
 
 // GET kanjitainer
@@ -317,6 +317,11 @@ func getCert(c echo.Context) error {
 	return c.String(http.StatusOK, response+"."+certacc)
 }
 
+// GET /about
+func getAbout(c echo.Context) error {
+	return c.Render(http.StatusOK, "about.html", nil)
+}
+
 // GET /contact
 func getContact(c echo.Context) error {
 	return c.Render(http.StatusOK, "contact.html", nil)
@@ -329,7 +334,7 @@ func getPrivacy(c echo.Context) error {
 
 // GET /dev
 func getDev(c echo.Context) error {
-	return c.Render(http.StatusOK, "dev.html", postmap)
+	return c.Render(http.StatusOK, "dev.html", nil)
 }
 
 // POST /post-contact
@@ -424,8 +429,11 @@ func main() {
 	findPosts("./tmpl/posts", ".html")
 	//fmt.Println(findPosts("./tmpl/posts", ".html"))
 	e.GET("/", getMain)
+	e.GET("/about", getAbout)
+	e.GET("/about-us", getAbout)
 	e.GET("/contact", getContact)
-	e.GET("/privacypolicy", getPrivacy)
+	e.GET("/contact-us", getContact)
+	e.GET("/privacy-policy", getPrivacy)
 	e.GET("/privacy", getPrivacy)
 	e.GET("/dev", getDev)
 	e.POST("/post-contact", postContact)

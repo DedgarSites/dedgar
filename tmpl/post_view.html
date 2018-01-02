@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 {{template "header.html"}}
+{{template "navbar.html"}}
 <body>
+  <div class="w3-content" style="max-width:900px;margin-top:75px">
     <ul id="postlist" style="list-style-type:circle">
     {{range $key, $value := .}}
         <li><a href="/post/{{$key}}">{{$key}}</a>: </li>
@@ -8,5 +10,6 @@
     <br>
     {{end}}
     </ul>
+  </div>
 </body>
 {{template "footer.html"}}
