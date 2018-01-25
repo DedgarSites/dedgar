@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+{{template "header.html"}}
+{{template "navbar.html"}}
+<head>
+    <title></title>
+</head>
+<body>
+<div class="w3-content" style="max-width:900px;margin-top:75px">
+ <p>
+ Daemonsets do not respect nodes that are marked as unschedulable, including masters. This means that even if your master nodes are marked "SchedulingDisabled" (as they should be) you can still run OpenShift-managed daemonsets on them. This is an efficient way to run monitoring applications or other administrative applications on nodes normally unavailable for application creation.
+ </p>
+</div>
+</body>
+</html>
+{{template "footer.html"}}

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+{{template "header.html"}}
+{{template "navbar.html"}}
+<head>
+    <title></title>
+</head>
+<body>
+<div class="w3-content" style="max-width:900px;margin-top:75px">
+ <p>
+ 
+ </p>
+</div>
+</body>
+</html>
+{{template "footer.html"}}
