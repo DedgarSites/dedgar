@@ -360,9 +360,9 @@ func getPostView(c echo.Context) error {
 }
 
 func findSummary(fpath string) string {
-	file, err := os.Open(fpath)
+	file, err := os.Open(fpath + "_summary")
 	if err != nil {
-		log.Fatal(err)
+		return "No summary"
 	}
 	defer file.Close()
 
@@ -386,13 +386,15 @@ func findSummary(fpath string) string {
 
 func findPosts(dirpath string, extension string) map[string]string {
 	if err := filepath.Walk(dirpath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			log.Println(err)
+		}
 		if strings.HasSuffix(path, extension) {
 			postname := strings.Split(path, extension)[0]
-			summary := findSummary(postname + "_summary")
+			summary := findSummary(postname)
+			fmt.Println(summary)
+			//fmt.Println(fmt.Sprintf("%T", summary))
 			postmap[filepath.Base(postname)] = summary
-			if err != nil {
-				log.Println(err)
-			}
 		}
 		return err
 	}); err != nil {
