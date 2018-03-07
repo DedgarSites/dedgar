@@ -8,7 +8,130 @@
 <body>
 <div class="w3-content" style="max-width:900px;margin-top:75px">
  <p>
- Daemonsets do not respect nodes that are marked as unschedulable, including masters. This means that even if your master nodes are marked "SchedulingDisabled" (as they should be) you can still run OpenShift-managed daemonsets on them. This is an efficient way to run monitoring applications or other administrative applications on nodes normally unavailable for application creation.
+ Daemonsets do not respect nodes that are marked as unschedulable, including masters. This means that even if your master nodes are marked "SchedulingDisabled" (as they are expected to be) you can still run OpenShift-managed daemonsets on them. This is a convenient way to make sure your monitoring or other administrative applications will still be on nodes that are normally unavailable for application creation.
+
+
+Here we're using the kubernetes mount option 'HostPath' to mount the entire host filesystem that will be accessed by a volley of monitoring applications hosted inside the container. We need to have root privileges to accomplish this, so we're using an sa (Service Account) linked to OpenShift's 'privileged' scc (Security Context Constraint).
+
+pullSecret is optional depending on whether or not you have a secured resgistry setup
+
+And finally, the full implementation will look like this:
+  <pre>
+---
+apiVersion: v1 
+kind: Template
+metadata:
+  creationTimestamp: null
+  generation: 1
+  labels:
+    provider: openshift
+    master-monitor-host: "true"
+    component: master-monitor
+  name: ds-master-monitor 
+objects:
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    labels:
+      template: ds-master-monitor
+    name: "ds-${PLAT}-master-monitor"
+  spec:
+    tags:
+    - annotations: null
+      from:
+        kind: DockerImage
+        name: "registry.<some-cluster>.dedgar.com:443/ds-master-monitor/ds-${PLAT}-master-monitor:latest"
+        pullSecret:
+          name: dockercfgjson
+      importPolicy:
+        scheduled: true
+      name: latest
+- kind: Service
+  apiVersion: v1
+  metadata:
+    name: ds-master-monitor
+    annotations:
+      description: service for ds-master-monitor
+  spec:
+    ports:
+    - name: web
+      port: 8080
+      targetPort: 8080
+    selector:
+      name: ds-master-monitor
+- apiVersion: extensions/v1beta1
+  kind: DaemonSet
+  metadata:
+    labels:
+      template: ds-master-monitor
+      component: master-monitor
+    name: ds-master-monitor
+  selector:
+    matchLabels:
+      name: ds-master-monitor
+  spec:
+    strategy:
+      resources: {}
+      type: Rolling
+    template:
+      metadata:
+        creationTimestamp: null
+        name: ds-master-monitor
+        labels:
+          name: ds-master-monitor
+          component: master-monitor
+      spec:
+        containers:
+        - env:
+          - name: OO_PAUSE_ON_START
+            value: "false"
+          image: "${NAMESPACE}/ds-${PLAT}-master-monitor:latest"
+          imagePullPolicy: Always
+          name: ds-master-monitor 
+          resources: {}
+          securityContext:
+            privileged: true
+            runAsUser: 0
+          terminationMessagePath: /dev/termination-log
+          volumeMounts:
+          - mountPath: /host
+            name: ds-master-monitor-host-filesystem
+          - mountPath: /secrets
+            name: ds-master-monitor-secrets
+        dnsPolicy: ClusterFirst
+        nodeSelector:
+          master-monitor-enabled: "True"
+        restartPolicy: Always
+        securityContext: {}
+        serviceAccount: mastermonitor
+        serviceAccountName: mastermonitor
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - name: ds-master-monitor-host-filesystem
+          hostPath:
+            path: /
+        - name: ds-master-monitor-secrets
+          secret:
+            secretName: ds-master-monitor-secrets
+    test: false
+    triggers:
+    - type: ConfigChange
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - ds-master-monitor
+        from:
+          kind: ImageStreamTag
+          name: "ds-${PLAT}-master-monitor:latest"
+      type: ImageChange
+parameters:
+- description: Platform name
+  name: PLAT
+  value: rhel7
+- description: Project name
+  name: NAMESPACE
+  value: ds-master-monitor
+  </pre>
  </p>
 </div>
 </body>
