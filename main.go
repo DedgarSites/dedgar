@@ -113,7 +113,6 @@ func getLevel(c echo.Context) error {
 
 	defer rows.Close()
 
-	//entry := make(map[string]map[string]string)
 	var entry []string
 
 	for rows.Next() {
@@ -129,9 +128,6 @@ func getLevel(c echo.Context) error {
 		if err := rows.Scan(&kanj, &von, &vkun, &transl, &roma, &rememb, &jlpt, &school); err != nil {
 			log.Fatal(err)
 		}
-		//		entry[kanj] = map[string]string{"kanj": kanj}
-		//entry[kanj] = map[string]string{"kanj": kanj, "von": von, "vkun": vkun, "transl": transl, "roma": roma, "rememb": rememb, "jlpt": jlpt, "school": school}
-		//		entry = append(entry, Kanji{kanj, von, vkun, transl, roma, rememb, jlpt, school})
 		entry = append(entry, kanj)
 	}
 
@@ -167,7 +163,6 @@ func getKanji(c echo.Context) error {
 	// ensure :kanji isn't used as an escaped query like "%e9%9b%a8"
 	uni_kanj, err := url.QueryUnescape(c.Param("kanji"))
 
-	//	fmt.Println(c.Param("selection"), c.Param("level"))
 	// start list of all in level get
 
 	var sqlQuery string
@@ -179,7 +174,6 @@ func getKanji(c echo.Context) error {
 		sqlQuery = "SELECT kanj, von, vkun, transl, roma, rememb, jlpt, school FROM info WHERE jlpt = $1"
 	}
 	rows, err := db.Query(sqlQuery, c.Param("level"))
-	//	rows, err := db.Query(sqlQuery, c.Param("selection"), c.Param("level"))
 
 	if err != nil {
 		log.Fatal(err)
@@ -392,7 +386,7 @@ func findPosts(dirpath string, extension string) map[string]string {
 		if strings.HasSuffix(path, extension) {
 			postname := strings.Split(path, extension)[0]
 			summary := findSummary(postname)
-			fmt.Println(summary)
+			//fmt.Println(summary)
 			//fmt.Println(fmt.Sprintf("%T", summary))
 			postmap[filepath.Base(postname)] = summary
 		}

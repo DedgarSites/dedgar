@@ -23,7 +23,9 @@ To build a docker container, we first need a Dockerfile. This will contain steps
  	<li>declare which user will be used to run the container: 1001 is the default unprivileged user in the openshift/centos7 base image</li>
 </ul>
 All of which are prerequisites to running our application on a traditional host machine. In some cases, you may just want to use  'FROM golang:1.9' or 'FROM golang:latest' which allows you to skip many of the steps in the below Dockerfile. The downside is that it ties you to to that particular image, and you may already have a base image inside of which you wish to also compile and run go code. You can save the following code as 'Dockerfile' with no file extension:
-<pre>FROM openshift/base-centos7
+<div>
+ <pre>
+FROM openshift/base-centos7
 
 RUN yum install -y golang &amp;&amp; \
     yum clean all
@@ -46,7 +48,8 @@ EXPOSE 8080
 USER 1001
 
 CMD ["go-wrapper", "run"]
-</pre>
+ </pre>
+</div>
 This way, we're not dependent on the golang image itself. With this method, you can have the added security of using only the images you build in-house. Though in this example we're just going to use the openshift/centos7-base image.
 
 Next we have our OpenShift application template, which will look very similar to Kubernetes application templates. This contains all the configuration needed to create our Service, Route, Image Stream, Build Config, and Deployment Config. This example is using YAML formatting, but JSON formatting is also supported. This can be convenient for automated deployments with Ansible, which I'll also cover in a later post.
@@ -163,11 +166,9 @@ parameters:
   description: The URL of the repository with your application source code
   value: https://github.com/xshinobu/echodev
 - name: SOURCE_REPOSITORY_REF
-  description: Set this to a branch name, tag or other ref of your repository if you
-    are not using the default branch
+  description: Set this to a branch name, tag or other ref of your repository if you are not using the default branch
 - name: CONTEXT_DIR
-  description: Set this to the relative path to your project if it is not in the root
-    of your repository
+  description: Set this to the relative path to your project if it is not in the root of your repository
 - name: APPLICATION_DOMAIN
   description: The exposed hostname that will route to the Beego service
   value: ''

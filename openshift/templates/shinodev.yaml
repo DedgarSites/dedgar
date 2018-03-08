@@ -102,11 +102,9 @@ parameters:
   description: The URL of the repository with your application source code
   value: https://github.com/xshinobu/shinodev
 - name: SOURCE_REPOSITORY_REF
-  description: Set this to a branch name, tag or other ref of your repository if you
-    are not using the default branch
+  description: Set this to a branch name, tag or other ref of your repository if you are not using the default branch
 - name: CONTEXT_DIR
-  description: Set this to the relative path to your project if it is not in the root
-    of your repository
+  description: Set this to the relative path to your project if it is not in the root of your repository
 - name: APPLICATION_DOMAIN
   description: The exposed hostname that will route to the Beego service
   value: ''
