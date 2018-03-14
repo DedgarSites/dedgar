@@ -22,18 +22,29 @@
    <li>keep an application highly available, with rolling deployments.</li>
    <li>optionally use a Horizontal Pod Autoscaler to automatically scale the number of running pods up and down in response to load.</li>
   </ul>
- Daemonsets do not respect nodes that are marked as unschedulable, including masters. This means that even if your master nodes are listed as "SchedulingDisabled" (as they should be in production, for security and stability reasons) you can still run OpenShift-managed daemonsets on them. This is an efficient way to run monitoring applications or other administrative applications on nodes normally unavailable for application creation.
+ Daemonsets do not respect nodes that are marked as unschedulable, including masters. This means that even if your master nodes are listed as "SchedulingDisabled" (as they should be in production, for security and stability reasons) you can still run OpenShift-managed daemonsets on them. This is a convenient way to make sure your monitoring or other administrative applications will still be on nodes that are normally unavailable for application creation.
 
+  <pre>
 nodeSelector master-daemonset-enabled
+  </pre>
 
 You would have to label and unlabel nodes one at a time to achieve this effect with a daemonset.
 
 To override the default node selector that you have specified in /etc/origin/master/master-config.yaml, you'll have to annotate the namespace where you'll be running your daemonset. Annotations don't have a concept of booleans, and are case sensitive. So be mindful of how you define your node selectors in your daemonset template, and remember that 'True', 'true', and 'TRUE' will all be considered different annotations in Kubernetes and OpenShift.
 
 That said, it's pretty simple to specify a new selector:
+
   <pre>
 oc annotate ns master-daemonset-project openshift.io/node-selector=master-daemonset-enabled=true
   </pre>
+
+Here we're using the kubernetes mount option 'HostPath' to mount the entire host filesystem that will be accessed by a volley of monitoring applications hosted inside the container. We need to have root privileges to accomplish this, so we're using an sa (Service Account) linked to OpenShift's 'privileged' scc (Security Context Constraint).
+
+pullSecret is optional depending on whether or not you have a secured registry setup.
+
+And finally, the full implementation will look like this:
+
+
 
   <pre>
 ---
