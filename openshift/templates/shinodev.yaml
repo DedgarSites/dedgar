@@ -55,7 +55,7 @@ objects:
       type: Source
     output:
       to:
-        kind: SourceImage
+        kind: DockerImage
         name: dedgar/shinodev:1.0
     triggers:
     - type: ConfigChange
