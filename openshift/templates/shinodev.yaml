@@ -52,11 +52,11 @@ objects:
         ref: "${SOURCE_REPOSITORY_REF}"
       contextDir: "${CONTEXT_DIR}"
     strategy:
-      type: Docker
+      type: Source
     output:
       to:
-        kind: ImageStreamTag
-        name: shinobu:latest
+        kind: SourceImage
+        name: dedgar/shinodev:1.0
     triggers:
     - type: ConfigChange
     - type: GitHub
