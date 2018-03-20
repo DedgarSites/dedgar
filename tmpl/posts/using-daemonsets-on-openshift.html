@@ -3,7 +3,7 @@
 {{template "header.html"}}
 {{template "navbar.html"}}
 <head>
-    <title></title>
+    <title>using daemonsets on openshift</title>
 </head>
 <body>
 <div class="w3-content" style="max-width:900px;margin-top:75px">
@@ -24,8 +24,13 @@
   </ul>
  Daemonsets do not respect nodes that are marked as unschedulable, including masters. This means that even if your master nodes are listed as "SchedulingDisabled" (as they should be in production, for security and stability reasons) you can still run OpenShift-managed daemonsets on them. This is a convenient way to make sure your monitoring or other administrative applications will still be on nodes that are normally unavailable for application creation.
 
+The option that controls whether or not a pod can be assigned to a particular node is called a Selector, and the kind we're using in this example is a NodeSelector:
   <pre>
-nodeSelector master-daemonset-enabled
+   spec:
+     template:
+       spec:
+         nodeSelector:
+           master-daemonset-enabled: "True"
   </pre>
 
 You would have to label and unlabel nodes one at a time to achieve this effect with a daemonset.
@@ -70,7 +75,7 @@ objects:
     - annotations: null
       from:
         kind: DockerImage
-        name: "registry.reg-aws.openshift.com:443/master-daemonset-project/master-daemonset:latest"
+        name: "<dockerhub-user>/master-daemonset:latest"
         pullSecret:
           name: dockercfgjson
       importPolicy: {}
@@ -155,5 +160,5 @@ objects:
  </p>
 </div>
 </body>
-</html>
 {{template "footer.html"}}
+</html>

@@ -1,10 +1,13 @@
 <!DOCTYPE html>
-{{template "header.html"}}
 <html lang="en">
+{{template "header.html"}}
+{{template "navbar.html"}}
 <head>
-    <title>dedgarpost</title>
+    <title>golang echo router example</title>
 </head>
 <body>
+<div class="w3-content" style="max-width:900px;margin-top:75px">
+ <p>
 The golang <a href="https://golang.org/pkg/net/http/">http</a> package is great for simple websites with static pages, but is pretty light on routing functionality out of the box. I was looking at adding dynamic routing while still keeping things as efficient as possible, and add only what functionality I needed for this particular website project.
 
 I took an interest in <a href="https://github.com/labstack/echo">echo</a> after comparing benchmarks of various go-based web frameworks and routers. It's built for speed with radix tree based route lookup, but it doesn't have built-in regexp support. That can be worked around with its match-any and adding your regexp checking in the route's handler, as I'll detail in the examples.
@@ -234,6 +237,8 @@ func main() {
 Now you can write your changes, and start up the new server with 'go run main.go'. Once you see the echo router graphic from earlier show up in your terminal, you're ready to test out a route. Navigate to 'localhost:8080/watch/some-show/season1/episode1' from your browser and take a look at the finished page! This router will accept any traffic to 'localhost:8080/', or 'localhost:8080/watch/anything/anything/anything', so feel free to experiment.
 
 Next time, we'll get a kubernetes template created to deploy a containerized version of our application to the cloud with OpenShift.
+ </p>
+</div>
 </body>
 {{template "footer.html"}}
 </html>
