@@ -3,7 +3,7 @@
 {{template "header.html"}}
 {{template "navbar.html"}}
 <head>
-    <title>using daemonsets on openshift</title>
+    <title>Using Daemonsets on OpenShift</title>
 </head>
 <body>
 <div class="w3-content" style="max-width:900px;margin-top:75px">
@@ -22,15 +22,15 @@
    <li>keep an application highly available, with rolling deployments.</li>
    <li>optionally use a Horizontal Pod Autoscaler to automatically scale the number of running pods up and down in response to load.</li>
   </ul>
- Daemonsets do not respect nodes that are marked as unschedulable, including masters. This means that even if your master nodes are listed as "SchedulingDisabled" (as they should be in production, for security and stability reasons) you can still run OpenShift-managed daemonsets on them. This is a convenient way to make sure your monitoring or other administrative applications will still be on nodes that are normally unavailable for application creation.
+Daemonsets do not respect nodes that are marked as unschedulable, including masters. This means that even if your master nodes are listed as "SchedulingDisabled" (as they should be in production, for security and stability reasons) you can still run OpenShift-managed daemonsets on them. This is a convenient way to make sure your monitoring or other administrative applications will still be on nodes that are normally unavailable for application creation.
 
 The option that controls whether or not a pod can be assigned to a particular node is called a Selector, and the kind we're using in this example is a NodeSelector:
   <pre>
-   spec:
-     template:
-       spec:
-         nodeSelector:
-           master-daemonset-enabled: "True"
+spec:
+  template:
+    spec:
+      nodeSelector:
+        master-daemonset-enabled: "True"
   </pre>
 
 You would have to label and unlabel nodes one at a time to achieve this effect with a daemonset.
@@ -43,13 +43,35 @@ That said, it's pretty simple to specify a new selector:
 oc annotate ns master-daemonset-project openshift.io/node-selector=master-daemonset-enabled=true
   </pre>
 
-Here we're using the kubernetes mount option 'HostPath' to mount the entire host filesystem that will be accessed by a volley of monitoring applications hosted inside the container. We need to have root privileges to accomplish this, so we're using an sa (Service Account) linked to OpenShift's 'privileged' scc (Security Context Constraint).
+Here we're using the Kubernetes mount option 'HostPath' to mount the entire host filesystem that will be accessed by a volley of monitoring applications hosted inside the container. We need to have root privileges to accomplish this, so we're using an sa (Service Account) linked to the OpenShift 'privileged' scc (Security Context Constraint).
 
-pullSecret is optional depending on whether or not you have a secured registry setup.
+pullSecret is optional depending on whether or not you plan to pull from a secured private registry that's already set up. If not, you can skip this section and omit it from your template. In this example, we're using our own credentials for a Docker registry, which we load into an OpenShift secret. Docker credentials are stored in $HOME/.docker/config.json by default when you do a docker login to the registry, and we can use them by running:
+
+  <pre>
+oc secrets new dockercfgjson .dockerconfigjson=$HOME/.docker/config.json -n <namespace>
+  </pre>
+
+
+  <pre>
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    labels:
+      template: master-daemonset
+    name: "master-daemonset"
+  spec:
+    tags:
+    - annotations: null
+      from:
+        kind: DockerImage
+        name: "<dockerhub-user>/master-daemonset:latest"
+        pullSecret:
+          name: dockercfgjson
+      importPolicy: {}
+      name: latest
+  </pre>
 
 And finally, the full implementation will look like this:
-
-
 
   <pre>
 ---

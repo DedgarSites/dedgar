@@ -12,7 +12,7 @@ The golang <a href="https://golang.org/pkg/net/http/">http</a> package is great 
 
 I took an interest in <a href="https://github.com/labstack/echo">echo</a> after comparing benchmarks of various go-based web frameworks and routers. It's built for speed with radix tree based route lookup, but it doesn't have built-in regexp support. That can be worked around with its match-any and adding your regexp checking in the route's handler, as I'll detail in the examples.
 
-Let's get started!
+Let's get started.
 
 &nbsp;
 
@@ -86,7 +86,7 @@ func main() {
   e.GET("/watch/:show/:season/:episode", getShow)
   e.Logger.Fatal(e.Start(":8080"))
 }</pre>
-Yay, functional routing! But what if you want to return multiple values from multiple parameters in your handler? Or use pre-formatted HTML templates that use CSS or JavaScript? We can do that, too! Let's move on to a more practical example.
+Yay, functional routing! But what if you want to return multiple values from multiple parameters in your handler? Or use pre-formatted HTML templates that use CSS or JavaScript? Of course can do that, too. Let's move on to a more practical example.
 
 <hr />
 
@@ -234,7 +234,7 @@ func main() {
 }
 
 </pre>
-Now you can write your changes, and start up the new server with 'go run main.go'. Once you see the echo router graphic from earlier show up in your terminal, you're ready to test out a route. Navigate to 'localhost:8080/watch/some-show/season1/episode1' from your browser and take a look at the finished page! This router will accept any traffic to 'localhost:8080/', or 'localhost:8080/watch/anything/anything/anything', so feel free to experiment.
+Now you can write your changes, and start up the new server with 'go run main.go'. Once you see the echo router graphic from earlier show up in your terminal, you're ready to test out a route. Navigate to 'localhost:8080/watch/some-show/season1/episode1' from your browser and take a look at the finished page. This router will accept any traffic to 'localhost:8080/', or 'localhost:8080/watch/anything/anything/anything', so feel free to experiment as much as you'd like.
 
 Next time, we'll get a kubernetes template created to deploy a containerized version of our application to the cloud with OpenShift.
  </p>
