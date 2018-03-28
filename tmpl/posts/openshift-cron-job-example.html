@@ -9,6 +9,120 @@
 <div class="w3-content" style="max-width:900px;margin-top:75px">
  <p>
  
+     
+ <pre>
+---
+apiVersion: v1 
+kind: Template
+metadata:
+  creationTimestamp: null
+  generation: 1
+  labels:
+    provider: openshift
+    report-sender-pod-host: "true"
+    component: report-sender-pod
+  name: report-sender-pod 
+objects:
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    labels:
+      template: report-sender-pod
+    name: "oso-${PLAT}-report-sender-pod"
+  spec:
+    tags:
+    - annotations: null
+      from:
+        kind: DockerImage
+        name: "registry.reg-aws.openshift.com:443/cron-report-sender/oso-${PLAT}-report-sender-pod:latest"
+        pullSecret:
+          name: dockercfgjson
+      importPolicy:
+        scheduled: true
+      name: latest
+- apiVersion: batch/v2alpha1
+  kind: CronJob
+  metadata:
+    name: report
+  spec:
+    schedule: "13 02 * * 1"  
+    jobTemplate:             
+      spec:
+        template:
+          metadata:
+            labels:          
+              parent: "cronjobreport"
+          spec:
+            containers:
+            - name: cronreport
+              image: "${NAMESPACE}/oso-${PLAT}-report-sender-pod:latest"
+              command: ["/usr/local/bin/cronjob.sh"]
+              volumeMounts:
+              - mountPath: /secrets
+                name: report-sender-pod-secrets
+            volumes:
+            - name: report-sender-pod-secrets
+              secret:
+                secretName: report-sender-pod-secrets
+            restartPolicy: OnFailure 
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      template: report-sender-pod
+    name: report-sender-pod
+  spec:
+    replicas: 1
+    selector:
+      deploymentconfig: report-sender-pod
+    strategy:
+      resources: {}
+      type: Rolling
+    template:
+      metadata:
+        labels:
+          deploymentconfig: report-sender-pod
+      spec:
+        containers:
+        - env:
+          - name: OO_PAUSE_ON_START
+            value: "false"
+          image: "report-sender-pod/oso-${PLAT}-report-sender-pod:latest"
+          imagePullPolicy: Always
+          name: report-sender-pod
+          resources: {}
+          securityContext: {}
+          terminationMessagePath: /dev/termination-log
+          volumeMounts:
+          - mountPath: /secrets
+            name: report-sender-pod-secrets
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - name: report-sender-pod-secrets
+          secret:
+            secretName: report-sender-pod-secrets
+    test: false
+    triggers:
+    - type: ConfigChange
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - report-sender-pod
+        from:
+          kind: ImageStreamTag
+          name: "${PLAT}-report-sender-pod:latest"
+      type: ImageChange
+parameters:
+- description: Platform name
+  name: PLAT
+  value: rhel7
+- description: Project name
+  name: NAMESPACE
+  value: cron-report-sender
+ </pre>
  </p>
 </div>
 </body>
