@@ -28,13 +28,13 @@ objects:
   metadata:
     labels:
       template: report-sender-pod
-    name: "oso-${PLAT}-report-sender-pod"
+    name: "report-sender"
   spec:
     tags:
     - annotations: null
       from:
         kind: DockerImage
-        name: "registry.reg-aws.openshift.com:443/cron-report-sender/oso-${PLAT}-report-sender-pod:latest"
+        name: "<dockerhub-user>/cron-report-sender/report-sender:latest"
         pullSecret:
           name: dockercfgjson
       importPolicy:
@@ -55,7 +55,7 @@ objects:
           spec:
             containers:
             - name: cronreport
-              image: "${NAMESPACE}/oso-${PLAT}-report-sender-pod:latest"
+              image: "${NAMESPACE}/report-sender-pod:latest"
               command: ["/usr/local/bin/cronjob.sh"]
               volumeMounts:
               - mountPath: /secrets
@@ -87,7 +87,7 @@ objects:
         - env:
           - name: OO_PAUSE_ON_START
             value: "false"
-          image: "report-sender-pod/oso-${PLAT}-report-sender-pod:latest"
+          image: "report-sender-pod/report-sender-pod:latest"
           imagePullPolicy: Always
           name: report-sender-pod
           resources: {}

@@ -1,0 +1,1 @@
+In this example we'll be exploring some use cases for Daemonsets on OpenShift. We'll leverage several neat features in Kubernetes to achieve what can essentially be used as a system container that runs in an OpenShift pod on every master in a cluster, and each container will mount its host's filesystem into the container itself.
