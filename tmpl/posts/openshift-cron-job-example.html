@@ -65,6 +65,31 @@ objects:
               secret:
                 secretName: report-sender-pod-secrets
             restartPolicy: OnFailure 
+- apiVersion: batch/v2alpha1
+  kind: CronJob
+  metadata:
+    name: report
+  spec:
+    schedule: "05 15 * * 5"
+    jobTemplate:
+      spec:
+        template:
+          metadata:
+            labels:
+              parent: "cronjobreport"
+          spec:
+            containers:
+            - name: cronreport
+              image: "${NAMESPACE}/report-sender-pod:latest"
+              command: ["/usr/local/bin/cronjob.sh"]
+              volumeMounts:
+              - mountPath: /secrets
+                name: report-sender-pod-secrets
+            volumes:
+            - name: report-sender-pod-secrets
+              secret:
+                secretName: report-sender-pod-secrets
+            restartPolicy: OnFailure
 - apiVersion: v1
   kind: DeploymentConfig
   metadata:
