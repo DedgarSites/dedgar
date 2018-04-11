@@ -97,6 +97,13 @@ objects:
           image: shinobu
           ports:
           - containerPort: 8080
+          volumeMounts:
+          - mountPath: /secrets
+            name: shinobu-secrets
+        volumes:
+        - name: shinobu-secrets
+          secret:
+          secretName: shinobu-secrets
 parameters:
 - name: SOURCE_REPOSITORY_URL
   description: The URL of the repository with your application source code

@@ -14,9 +14,20 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ses"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	_ "github.com/lib/pq"
+)
+
+const (
+	Sender    = "contact@shinobu.ninja"
+	Recipient = "contact@shinobu.ninja"
+	Subject   = "dedgar contact form submission"
+	CharSet   = "UTF-8"
 )
 
 var (
@@ -333,9 +344,60 @@ func getDev(c echo.Context) error {
 
 // POST /post-contact
 func postContact(c echo.Context) error {
+	TextBody := c.FormValue("name") + "\n" + c.FormValue("email") + "\n" + c.FormValue("message")
+
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String("us-west-2")},
+	)
+
+	svc := ses.New(sess)
+
+	input := &ses.SendEmailInput{
+		Destination: &ses.Destination{
+			CcAddresses: []*string{},
+			ToAddresses: []*string{
+				aws.String(Recipient),
+			},
+		},
+		Message: &ses.Message{
+			Body: &ses.Body{
+				Text: &ses.Content{
+					Charset: aws.String(CharSet),
+					Data:    aws.String(TextBody),
+				},
+			},
+			Subject: &ses.Content{
+				Charset: aws.String(CharSet),
+				Data:    aws.String(Subject),
+			},
+		},
+		Source: aws.String(Sender),
+	}
+
+	result, err := svc.SendEmail(input)
+
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case ses.ErrCodeMessageRejected:
+				fmt.Println(ses.ErrCodeMessageRejected, aerr.Error())
+			case ses.ErrCodeMailFromDomainNotVerifiedException:
+				fmt.Println(ses.ErrCodeMailFromDomainNotVerifiedException, aerr.Error())
+			case ses.ErrCodeConfigurationSetDoesNotExistException:
+				fmt.Println(ses.ErrCodeConfigurationSetDoesNotExistException, aerr.Error())
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+			fmt.Println(err.Error())
+		}
+
+	}
 	fmt.Println(c.FormValue("name"))
 	fmt.Println(c.FormValue("email"))
 	fmt.Println(c.FormValue("message"))
+	fmt.Println("Email Sent to address: " + Recipient)
+	fmt.Println(result)
 	return c.String(http.StatusOK, "Form submitted")
 }
 
