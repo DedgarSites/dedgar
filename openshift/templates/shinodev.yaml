@@ -98,7 +98,7 @@ objects:
           ports:
           - containerPort: 8080
           volumeMounts:
-          - mountPath: /secrets
+          - mountPath: /opt/app-root/src/.aws
             name: shinobu-secrets
         volumes:
         - name: shinobu-secrets
