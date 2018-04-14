@@ -9,8 +9,59 @@
 <div class="w3-content" style="max-width:900px;margin-top:75px">
  <p>
  
-     
+OpenShift Cron Jobs provide a way to run programs and scripts on a fixed schedule, without having to rely on services in long lived containers. A new container gets created to execute code for each run of the cron job, and the container gets removed after the code inside of it reports it has finished running and exited successfully.
+
+If you're not already familiar with Kubernetes Jobs or cron schedule formatting in general, here is an overview of the available scheduling options:
+
  <pre>
+┌───────────── minute (0 - 59)
+│ ┌───────────── hour (0 - 23)
+│ │ ┌───────────── day of month (1 - 31)
+│ │ │ ┌───────────── month (1 - 12)
+│ │ │ │ ┌───────────── day of week (0 - 6) (Sunday to Saturday;
+│ │ │ │ │                                       7 is also Sunday on some systems)
+│ │ │ │ │
+│ │ │ │ │
+* * * * *  command to execute
+ </pre>
+
+So a cron schedule of "30 14 * * 5" would run at 2:30 PM every Friday, according to the timezone the host node is using. In the case of Openshift Online, the nodes are set to use UTC.
+
+Cron Jobs will launch containers that behave and run just like any other containers on OpenShift, only these will be deleted as soon as they report a successful completion. They can use secrets, volumeMounts, Image Pull Secrets, any other configuration settings you're used to using in DeploymentConfigs 
+
+The restartPolicy specifies that the job will keep restarting this container when any failures are encountered during the job's run. This makes it important to ensure your commands, scripts, and programs all exit cleanly, e.g. "exit 0" for bash, "sys.exit(0)" for python, etc. These serve as as one layer of safeguards so the pods don't get stuck in an infinite restart loop.
+
+<pre>
+- apiVersion: batch/v2alpha1
+  kind: CronJob
+  metadata:
+    name: report
+  spec:
+    schedule: "30 14 * * 5"
+    jobTemplate:
+      spec:
+        template:
+          metadata:
+            labels:
+              parent: "cronjobreport"
+          spec:
+            containers:
+            - name: cronreport
+              image: "${NAMESPACE}/report-sender-pod:latest"
+              command: ["/secrets/cronjob.py"]
+              volumeMounts:
+              - mountPath: /secrets
+                name: report-sender-pod-secrets
+            volumes:
+            - name: report-sender-pod-secrets
+              secret:
+                secretName: report-sender-pod-secrets
+            restartPolicy: OnFailure
+</pre>
+
+And finally, here is an example of a complete template, containing two separate cron jobs and one long lived container DeploymentConfig:
+
+<pre>
 ---
 apiVersion: v1 
 kind: Template
@@ -45,7 +96,7 @@ objects:
   metadata:
     name: report
   spec:
-    schedule: "13 02 * * 1"  
+    schedule: "30 14 * * 5"  
     jobTemplate:             
       spec:
         template:
@@ -56,7 +107,7 @@ objects:
             containers:
             - name: cronreport
               image: "${NAMESPACE}/report-sender-pod:latest"
-              command: ["/usr/local/bin/cronjob.sh"]
+              command: ["/secrets/cronjob.py"]
               volumeMounts:
               - mountPath: /secrets
                 name: report-sender-pod-secrets
@@ -70,7 +121,7 @@ objects:
   metadata:
     name: report
   spec:
-    schedule: "05 15 * * 5"
+    schedule: "05 13 * * 1"
     jobTemplate:
       spec:
         template:
@@ -81,7 +132,7 @@ objects:
             containers:
             - name: cronreport
               image: "${NAMESPACE}/report-sender-pod:latest"
-              command: ["/usr/local/bin/cronjob.sh"]
+              command: ["/secrets/cronjob.py"]
               volumeMounts:
               - mountPath: /secrets
                 name: report-sender-pod-secrets

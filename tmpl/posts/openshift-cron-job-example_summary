@@ -1,0 +1,1 @@
+OpenShift Cron Jobs provide a way to run programs and scripts on a fixed schedule, without having to rely on services in long lived containers. A new container gets created to execute code for each run of the cron job, and the container gets removed after the code inside of it reports it has finished running and exited successfully.

@@ -51,6 +51,7 @@ pullSecret is optional depending on whether or not you plan to pull from a secur
 oc secrets new dockercfgjson .dockerconfigjson=$HOME/.docker/config.json -n <namespace>
   </pre>
 
+And here's how the pullSecret is used in the ImageStream:
 
   <pre>
 - apiVersion: v1
