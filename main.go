@@ -342,6 +342,16 @@ func getDev(c echo.Context) error {
 	return c.Render(http.StatusOK, "dev.html", nil)
 }
 
+// GET /sitemap.xml
+func getSitemap(c echo.Context) error {
+	return c.Render(http.StatusOK, "sitemap.html", nil)
+}
+
+// GET /robots.txt
+func getRobots(c echo.Context) error {
+	return c.Render(http.StatusOK, "robots.html", nil)
+}
+
 // POST /post-contact
 func postContact(c echo.Context) error {
 	TextBody := c.FormValue("name") + "\n" + c.FormValue("email") + "\n" + c.FormValue("message")
@@ -440,6 +450,9 @@ func findSummary(fpath string) string {
 	return buffer.String()
 }
 
+// Populates a map of postnames that gets checked every call to GET /post/:postname.
+// We're running in a container, so populating this on startup works fine as we won't be adding
+// any new posts while the container is running.
 func findPosts(dirpath string, extension string) map[string]string {
 	if err := filepath.Walk(dirpath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -515,6 +528,8 @@ func main() {
 	e.GET("/.well-known/acme-challenge/:response/", getCert)
 	e.GET("/well-known/acme-challenge/:response", getCert)
 	e.GET("/well-known/acme-challenge/:response/", getCert)
+	e.GET("/robots.txt", getRobots)
+	e.GET("/sitemap.xml", getSitemap)
 	e.Logger.Info(e.Start(":8080"))
 	//	e.Logger.Info(e.StartAutoTLS(":443"))
 }
