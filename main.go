@@ -342,16 +342,6 @@ func getDev(c echo.Context) error {
 	return c.Render(http.StatusOK, "dev.html", nil)
 }
 
-// GET /sitemap.xml
-func getSitemap(c echo.Context) error {
-	return c.Render(http.StatusOK, "sitemap.html", nil)
-}
-
-// GET /robots.txt
-func getRobots(c echo.Context) error {
-	return c.Render(http.StatusOK, "robots.html", nil)
-}
-
 // POST /post-contact
 func postContact(c echo.Context) error {
 	TextBody := c.FormValue("name") + "\n" + c.FormValue("email") + "\n" + c.FormValue("message")
@@ -528,8 +518,8 @@ func main() {
 	e.GET("/.well-known/acme-challenge/:response/", getCert)
 	e.GET("/well-known/acme-challenge/:response", getCert)
 	e.GET("/well-known/acme-challenge/:response/", getCert)
-	e.GET("/robots.txt", getRobots)
-	e.GET("/sitemap.xml", getSitemap)
+	e.File("/robots.txt", "static/public/robots.txt")
+	e.File("/sitemap.xml", "static/public/sitemap.xml")
 	e.Logger.Info(e.Start(":8080"))
 	//	e.Logger.Info(e.StartAutoTLS(":443"))
 }
