@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+{{template "header.html"}}
+{{template "navbar.html"}}
+<head>
+    <title>Send email with SES on OpenShift</title>
+</head>
+<body>
+<div class="w3-content" style="max-width:900px;margin-top:75px">
+ <p>
+ OpenShift secrets allow you to load private data into your pods and containers without baking them into your container images for all to see and use. This allows you to separate your prave data from your code, and securely host your images in public registries. In this example, we'll be using OpenShift secrets to store a set of API key credentials for an AWS (Amazon Web Services) IAM (Identity and Access Management) account, which we'll be using to send emails with Amazon SES (Simple Email Service).
+ <br>
+ This guide presumes you've already signed up for an AWS account, and run through the verification process for the sender and recipient addresses you want to use. If you haven't requested to be let out of the AWS sandbox, you'll still be subject to the same SES sender restrictions as you would be if you were sending email locally.
+ <br>
+ Here is a modified version of the example sender code from the AWS documentation. It's the just about the most simple implementation possible, and can be run standalone after saving to a file like "ses_sender.go" and running via "go run ses_sender.go". Or it can be modified and integrated into whatever application you have in mind already.
+ <pre>
+package main
+
+import (
+	"fmt"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ses"
+)
+
+const (
+	Sender    = "sender_email@somedomain.com"
+	Recipient = "recipient_email@somedomain.com"
+	Subject   = "Golang SES test email"
+	TextBody  = "Body of text, your message goes here."
+	CharSet   = "UTF-8"
+)
+
+func main() {
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String("some-aws-region")},
+	)
+
+	svc := ses.New(sess)
+
+	input := &ses.SendEmailInput{
+		Destination: &ses.Destination{
+			CcAddresses: []*string{},
+			ToAddresses: []*string{
+				aws.String(Recipient),
+			},
+		},
+		Message: &ses.Message{
+			Body: &ses.Body{
+				Text: &ses.Content{
+					Charset: aws.String(CharSet),
+					Data:    aws.String(TextBody),
+				},
+			},
+			Subject: &ses.Content{
+				Charset: aws.String(CharSet),
+				Data:    aws.String(Subject),
+			},
+		},
+		Source: aws.String(Sender),
+	}
+
+	result, err := svc.SendEmail(input)
+
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case ses.ErrCodeMessageRejected:
+				fmt.Println(ses.ErrCodeMessageRejected, aerr.Error())
+			case ses.ErrCodeMailFromDomainNotVerifiedException:
+				fmt.Println(ses.ErrCodeMailFromDomainNotVerifiedException, aerr.Error())
+			case ses.ErrCodeConfigurationSetDoesNotExistException:
+				fmt.Println(ses.ErrCodeConfigurationSetDoesNotExistException, aerr.Error())
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+			fmt.Println(err.Error())
+		}
+
+		return
+	}
+
+	fmt.Println("Email Sent to address: " + Recipient)
+	fmt.Println(result)
+}
+
+</pre>
+
+If you wanted to use this practically in a web application, like the one we wrote at <a href="/golang-echo-router-example.html">Golang Echo Router Example</a>, you can get an idea of how you might include this for use as a simple web contact form with this example. Note that this doesn't cover input validation or anti abuse measures, just parsing the input from the contact form into a string and sending it via SES.
+<pre>
+// POST /post-contact
+func postContact(c echo.Context) error {
+	TextBody := c.FormValue("name") + "\n" + c.FormValue("email") + "\n" + c.FormValue("message")
+
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String("some-aws-region")},
+	)
+
+	svc := ses.New(sess)
+
+	input := &ses.SendEmailInput{
+		Destination: &ses.Destination{
+			CcAddresses: []*string{},
+			ToAddresses: []*string{
+				aws.String(Recipient),
+			},
+		},
+		Message: &ses.Message{
+			Body: &ses.Body{
+				Text: &ses.Content{
+					Charset: aws.String(CharSet),
+					Data:    aws.String(TextBody),
+				},
+			},
+			Subject: &ses.Content{
+				Charset: aws.String(CharSet),
+				Data:    aws.String(Subject),
+			},
+		},
+		Source: aws.String(Sender),
+	}
+
+	result, err := svc.SendEmail(input)
+
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case ses.ErrCodeMessageRejected:
+				fmt.Println(ses.ErrCodeMessageRejected, aerr.Error())
+			case ses.ErrCodeMailFromDomainNotVerifiedException:
+				fmt.Println(ses.ErrCodeMailFromDomainNotVerifiedException, aerr.Error())
+			case ses.ErrCodeConfigurationSetDoesNotExistException:
+				fmt.Println(ses.ErrCodeConfigurationSetDoesNotExistException, aerr.Error())
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+			fmt.Println(err.Error())
+		}
+
+	}
+	fmt.Println(c.FormValue("name"))
+	fmt.Println(c.FormValue("email"))
+	fmt.Println(c.FormValue("message"))
+	fmt.Println("Email Sent to address: " + Recipient)
+	fmt.Println(result)
+ </pre>
+Either way, both of these examples expect to source their credentials from the default AWS credentials location. Specifically, they look for a plain text file called 'credentials'.at $HOME/.aws or ~/.aws unless specified otherwise. It is possible to read the credentials from elsewhere by setting an environment variable for a shared credentials file, or just by passing the API key and secret access key as variables when you go to call your function, but it's easy enough to accomodate the defaults. Make a new file called "credentials" with the following info in the same format. Keep the "[default]" line as is since AWS will attempt to source credentials from this section first.
+ <pre>
+[default]
+aws_access_key_id: <redacted> 
+aws_secret_access_key: <redacted>
+ </pre>
+ Actually loading these credentials into a secret is just as simple. If you haven't already done so, login to the OpenShift cluster with the following command. You can skip this step if you're already logged in:
+ <pre>
+ oc login https://api.pro-us-east-1.openshift.com --token=<token-from-web-console>
+ </pre>
+ If you're already logged in, then this line is all that's needed to create the new secret, which will match the contents of the file named "contact_form_creds":
+ <pre>
+ oc secrets new email-sender-secrets credentials=credentials
+ </pre>
+To explain what all is going on here, here's what an export of the created secret looks like: 
+ <pre>
+oc export secret contactform
+apiVersion: v1
+data:
+  credentials: W2RlZmF1bHRdCmF3c19hY2Nlc3Nfa2V5X2lkOiBBS0lBSjdTQ0xHU0dKM7E0WEpBQQphd4Gfc2VjcmV0X2FjY2Vzc19rZXk6IFNjcUJMTlDaGVRVUdtN2l1NUXFwRnU3ZGVpTU9Oa2NDcVZwTW1TMncgCg==
+kind: Secret
+metadata:
+  creationTimestamp: null
+  name: contactform
+type: Opaque
+ </pre>
+We have "email-sender-secrets" which is the name of the secret that we'll need to refer to in template's DeployConfig section. The "credentials=credentials" portion means we're making a dictionary key named "credentials" with the contents matching those in a local file, which we also named "credentials". Any of these values can be set to whatever descriptive name you prefer, so if you wanted to you could just as easily create a new secret with keys from multiple sources like: 
+ <pre>
+ oc secrets new some-secret-name db_creds=file1.txt users=file2.csv
+ </pre>
+ <br>
+ We'll then refer to this secret in the OpenShift template file, mounting it into the container from an ephemeral volume, and after that we need to specify where it gets mounted. New secrets can be easily included in your existing templates' DeploymentConfig section as well. And when you add a new secret via "oc edit dc <dcname>" and save your work with "wq", your replication controller should automatically deploy a new container version with a new ReplicationSet. Here's a trimmed down example to give an idea of where the options need to get nested.
+ <br>
+ <pre>
+---
+- apiVersion: v1
+  kind: DeploymentConfig
+   spec:
+    template:
+      spec:
+        containers:
+          volumeMounts:
+          - mountPath: /opt/app-root/src/.aws
+            name: email-sender-secrets
+        volumes:
+        - name: email-sender-secrets
+          secret:
+          secretName: email-sender-secrets
+ </pre>
+ And finally, here's a full example inline with a template:
+ <pre>
+---
+apiVersion: v1
+kind: Template
+metadata:
+  name: email-sender
+objects:
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    labels:
+      template: email-sender
+    name: "${PLAT}-email-sender"
+  spec:
+    tags:
+    - annotations: null
+      from:
+        kind: DockerImage
+        name: "library/${PLAT}-email-sender:latest"
+      importPolicy: {}
+      name: latest
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      template: email-sender
+    name: email-sender
+  spec:
+    replicas: 1
+    selector:
+      deploymentconfig: email-sender
+    strategy:
+      resources: {}
+      type: Rolling
+    template:
+      metadata:
+        labels:
+          deploymentconfig: email-sender
+      spec:
+        containers:
+        - env:
+          - name: OO_PAUSE_ON_START
+            value: "false"
+          image: "email-sender/${PLAT}-email-sender:latest"
+          imagePullPolicy: Always
+          name: email-sender
+          resources: {}
+          securityContext: {}
+          terminationMessagePath: /dev/termination-log
+          volumeMounts:
+          - mountPath: /opt/app-root/src/.aws
+            name: email-sender-secrets
+        volumes:
+        - name: email-sender-secrets
+          secret:
+          secretName: email-sender-secrets
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers:
+    - type: ConfigChange
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - email-sender
+        from:
+          kind: ImageStreamTag
+          name: "${PLAT}-email-sender:latest"
+      type: ImageChange
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      template: email-sender
+    name: email-sender
+  spec:
+    selector:
+      deploymentconfig: email-sender
+    sessionAffinity: None
+    type: ClusterIP
+parameters:
+- description: Platform name
+  name: PLAT
+  value: rhel7
+ </pre>
+ You can use multiple secrets in your DeploymentConfigs the same way, just make sure you have a unique name and secretName for each one. You can also mount multiple secrets into the same mountPath directory, like /secrets or /etc/myconfig/somedir for example.
+ </p>
+</div>
+</body>
+{{template "footer.html"}}
+</html>

@@ -10,7 +10,7 @@
     <loc>http://www.dedgar.com/contact</loc> 
   </url>
   <url>
-    <loc>http://www.dedgar.com/posts</loc> 
+    <loc>http://www.dedgar.com/post</loc> 
   </url>
   <url>
     <loc>http://www.dedgar.com/privacy</loc> 
@@ -19,12 +19,15 @@
     <loc>http://www.dedgar.com/post/deploying-a-golang-application-to-openshift</loc> 
   </url>
   <url>
-    <loc>http://www.dedgar.com/post/golang-echo-router-dedgar</loc> 
+    <loc>http://www.dedgar.com/post/golang-echo-router-example</loc> 
   </url>
   <url>
-    <loc>http://www.dedgar.com/post/openshift-cron-job-dedgar</loc> 
+    <loc>http://www.dedgar.com/post/openshift-cron-job-example</loc> 
   </url>
   <url>
     <loc>http://www.dedgar.com/post/using-daemonsets-on-openshift</loc> 
+  </url>
+  <url>
+    <loc>http://www.dedgar.com/post/send-email-with-ses-on-openshift</loc> 
   </url>
 </urlset>

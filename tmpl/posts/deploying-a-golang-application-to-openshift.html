@@ -27,7 +27,7 @@ To build a docker container, we first need a Dockerfile. This will contain steps
  	<li>open the port the container will use to accept incoming traffic</li>
  	<li>declare which user will be used to run the container: 1001 is the default unprivileged user in the openshift/centos7 base image</li>
 </ul>
-All of which are prerequisites to running our application on a traditional host machine. In some cases, you may just want to use  'FROM golang:1.9' or 'FROM golang:latest' which allows you to skip many of the steps in the below Dockerfile. The downside is that it ties you to to that particular image, and you may already have a base image inside of which you wish to also compile and run go code. You can save the following code as 'Dockerfile' with no file extension:
+All of which are prerequisites to running our application on a traditional host machine. In some cases, you may just want to use  'FROM golang:1.9' or 'FROM golang:latest' which allows you to skip many of the steps in the below Containerfile. The downside is that it ties you to to that particular image, and you may already have a base image inside of which you wish to also compile and run go code. You can save the following code as 'Dockerfile' with no file extension:
 <div>
  <pre>
 FROM openshift/base-centos7
