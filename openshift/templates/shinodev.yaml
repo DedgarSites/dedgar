@@ -100,10 +100,15 @@ objects:
           volumeMounts:
           - mountPath: /opt/app-root/src/.aws
             name: shinobu-secrets
+          - mountPath: /secrets
+            name: shinobu-oauth
         volumes:
         - name: shinobu-secrets
           secret:
           secretName: shinobu-secrets
+        - name: shinobu-oauth
+          secret:
+          secretName: shinobu-oauths
 parameters:
 - name: SOURCE_REPOSITORY_URL
   description: The URL of the repository with your application source code

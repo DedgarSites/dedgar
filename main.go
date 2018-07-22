@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -18,9 +19,17 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ses"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	_ "github.com/lib/pq"
+	"github.com/qor/admin"
+	"github.com/qor/auth"
+	"github.com/qor/auth/auth_identity"
+	"github.com/qor/auth/providers/google"
+	"github.com/qor/auth_themes/clean"
+	"github.com/qor/session/manager"
 )
 
 const (
@@ -46,8 +55,25 @@ type Contact struct {
 	Message string //`json:"message" form:"message"`
 }
 
+// Define a GORM-backend model
+type User struct {
+	gorm.Model
+	Name string
+}
+
+// Define another GORM-backend model
+type Product struct {
+	gorm.Model
+	Name        string
+	Description string
+}
+
 type Template struct {
 	templates *template.Template
+}
+
+func initDatabase() {
+	fmt.Println("tet")
 }
 
 func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
@@ -462,7 +488,56 @@ func findPosts(dirpath string, extension string) map[string]string {
 	return postmap
 }
 
+func getOauth(filepath string) (id, key string) {
+	filebytes, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		fmt.Println(err)
+	}
+	file_str := string(filebytes)
+
+	id, key = strings.Split(file_str, "\n")[0], strings.Split(file_str, "\n")[1]
+
+	return id, key
+}
+
 func main() {
+	DB, _ := gorm.Open("sqlite3", "demo.db")
+	DB.AutoMigrate(&User{}, &Product{})
+
+	//	config := auth.Config{}
+
+	Auth := clean.New(&auth.Config{
+		DB: DB,
+		//		Render:    config.View,
+		//		Mailer:    config.Mailer,
+		//		UserModel: models.User{},
+	})
+
+	DB.AutoMigrate(&auth_identity.AuthIdentity{})
+
+	g_id, g_key := getOauth("/secrets/google_auth_creds")
+
+	Auth.RegisterProvider(google.New(&google.Config{
+		ClientID:     g_id,
+		ClientSecret: g_key,
+	}))
+
+	Admin := admin.New(&admin.AdminConfig{DB: DB})
+
+	Admin.AddResource(&User{})
+	Admin.AddResource(&Product{})
+
+	mux := http.NewServeMux()
+
+	mux.Handle("/auth/", Auth.NewServeMux())
+	Admin.MountTo("/admin", mux)
+
+	go http.ListenAndServe(":9000", manager.SessionManager.Middleware(mux))
+
+	//	if err := http.ListenAndServe(":9000", mux); err != nil {
+	//		log.Fatal("ListenAndServe: ", err)
+	//	}
+
 	t := &Template{
 		templates: func() *template.Template {
 			tmpl := template.New("")
