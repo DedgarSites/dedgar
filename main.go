@@ -29,7 +29,6 @@ import (
 	"github.com/qor/auth/auth_identity"
 	"github.com/qor/auth/providers/google"
 	"github.com/qor/auth_themes/clean"
-	"github.com/qor/session/manager"
 )
 
 const (
@@ -501,6 +500,31 @@ func getOauth(filepath string) (id, key string) {
 }
 
 func main() {
+	t := &Template{
+		templates: func() *template.Template {
+			tmpl := template.New("")
+			if err := filepath.Walk("./tmpl", func(path string, info os.FileInfo, err error) error {
+				if strings.HasSuffix(path, ".html") {
+					_, err = tmpl.ParseFiles(path)
+					if err != nil {
+						log.Println(err)
+					}
+				}
+				return err
+			}); err != nil {
+				panic(err)
+			}
+			return tmpl
+		}(),
+	}
+	e := echo.New()
+	e.Static("/", "static")
+	e.Renderer = t
+	//e.HTTPErrorHandler = custom404Handler
+	//	e.Pre(middleware.HTTPSWWWRedirect())
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
+
 	DB, _ := gorm.Open("sqlite3", "demo.db")
 	DB.AutoMigrate(&User{}, &Product{})
 
@@ -528,40 +552,11 @@ func main() {
 	Admin.AddResource(&Product{})
 
 	mux := http.NewServeMux()
-
-	mux.Handle("/auth/", Auth.NewServeMux())
 	Admin.MountTo("/admin", mux)
 
-	go http.ListenAndServe(":9000", manager.SessionManager.Middleware(mux))
+	e.Any("/admin/*", echo.WrapHandler(mux))
+	e.Any("/auth/*", echo.WrapHandler(Auth.NewServeMux()))
 
-	//	if err := http.ListenAndServe(":9000", mux); err != nil {
-	//		log.Fatal("ListenAndServe: ", err)
-	//	}
-
-	t := &Template{
-		templates: func() *template.Template {
-			tmpl := template.New("")
-			if err := filepath.Walk("./tmpl", func(path string, info os.FileInfo, err error) error {
-				if strings.HasSuffix(path, ".html") {
-					_, err = tmpl.ParseFiles(path)
-					if err != nil {
-						log.Println(err)
-					}
-				}
-				return err
-			}); err != nil {
-				panic(err)
-			}
-			return tmpl
-		}(),
-	}
-	e := echo.New()
-	e.Static("/", "static")
-	e.Renderer = t
-	e.HTTPErrorHandler = custom404Handler
-	//	e.Pre(middleware.HTTPSWWWRedirect())
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
 	findPosts("./tmpl/posts", ".html")
 	//fmt.Println(findPosts("./tmpl/posts", ".html"))
 	e.GET("/", getMain)
