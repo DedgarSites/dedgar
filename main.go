@@ -369,6 +369,11 @@ func getDev(c echo.Context) error {
 
 // POST /post-contact
 func postContact(c echo.Context) error {
+
+	if strings.Contains(c.FormValue("message"), "http") && strings.Contains(c.FormValue("message"), "dedgar") == false {
+		return c.String(http.StatusOK, "Form submitted")
+	}
+
 	TextBody := c.FormValue("name") + "\n" + c.FormValue("email") + "\n" + c.FormValue("message")
 
 	sess, err := session.NewSession(&aws.Config{
@@ -552,6 +557,8 @@ func main() {
 	Admin.AddResource(&Product{})
 
 	mux := http.NewServeMux()
+
+	//Admin.SetAuth
 	Admin.MountTo("/admin", mux)
 
 	e.Any("/admin/*", echo.WrapHandler(mux))
