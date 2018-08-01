@@ -29,6 +29,7 @@ import (
 	"github.com/qor/auth/auth_identity"
 	"github.com/qor/auth/providers/google"
 	"github.com/qor/auth_themes/clean"
+	"github.com/qor/session/manager"
 )
 
 const (
@@ -370,7 +371,7 @@ func getDev(c echo.Context) error {
 // POST /post-contact
 func postContact(c echo.Context) error {
 
-	if strings.Contains(c.FormValue("message"), "http") && strings.Contains(c.FormValue("message"), "dedgar") == false {
+	if strings.Contains(c.FormValue("message"), "http") && strings.Contains(c.FormValue("message"), "dedgar.com/") == false {
 		return c.String(http.StatusOK, "Form submitted")
 	}
 
@@ -504,6 +505,22 @@ func getOauth(filepath string) (id, key string) {
 	return id, key
 }
 
+//func qorMiddleware() echo.MiddlewareFunc {
+//    return func(next echo.HandlerFunc) echo.HandlerFunc {
+//      return func(c echo.Context) err error {
+//         e.Set(manager.SessionManager.Middleware(mux)
+//        return next(c)
+//   }
+//   }
+//}
+
+//func qorFunc(next echo.HandlerFunc) echo.HandlerFunc {
+//	return func(c echo.Context) error {
+//		next.ServeHTTP(manager.SessionManager.Middleware(mux))
+//		return next(c)
+//	}
+//}
+
 func main() {
 	t := &Template{
 		templates: func() *template.Template {
@@ -559,10 +576,15 @@ func main() {
 	mux := http.NewServeMux()
 
 	//Admin.SetAuth
+	//manager.Sessionmanager.Middleware()
+	//e.Use(manager.SessionManager.Middleware(mux))
+	//e.Use(qorMiddleware())
 	Admin.MountTo("/admin", mux)
 
 	e.Any("/admin/*", echo.WrapHandler(mux))
 	e.Any("/auth/*", echo.WrapHandler(Auth.NewServeMux()))
+
+	e.Use(echo.WrapMiddleware(manager.SessionManager.Middleware(mux)))
 
 	findPosts("./tmpl/posts", ".html")
 	//fmt.Println(findPosts("./tmpl/posts", ".html"))
