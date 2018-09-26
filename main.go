@@ -3,24 +3,30 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"database/sql"
 	"fmt"
 	"html/template"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"./models"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
+	asession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ses"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/labstack/echo"
+	"github.com/labstack/echo-contrib/session"
+	"golang.org/x/crypto/bcrypt"
+
+	"github.com/gorilla/sessions"
 	"github.com/labstack/echo/middleware"
-	_ "github.com/lib/pq"
 )
 
 const (
@@ -33,11 +39,13 @@ const (
 var (
 	host     = os.Getenv("POSTGRESQL_SERVICE_HOST")
 	port     = os.Getenv("POSTGRESQL_SERVICE_PORT")
-	user     = os.Getenv("POSTGRESQL_USER")
-	password = os.Getenv("POSTGRESQL_PASSWORD")
+	dbuser   = os.Getenv("POSTGRESQL_USER")
+	dbpass   = os.Getenv("POSTGRESQL_PASSWORD")
 	dbname   = os.Getenv("POSTGRESQL_DATABASE")
 	certacc  = os.Getenv("CERT_ACC")
 	postmap  = make(map[string]string)
+	psqlInfo = fmt.Sprintf("host=%s port=%s user=%s "+"password=%s dbname=%s sslmode=disable", host, port, dbuser, dbpass, dbname)
+	DB, _    = gorm.Open("postgres", psqlInfo)
 )
 
 type Contact struct {
@@ -68,242 +76,6 @@ func getMain(c echo.Context) error {
 	return c.Render(http.StatusOK, "main.html", postmap)
 }
 
-// GET kanjitainer
-func getContainer(c echo.Context) error {
-	return c.Render(http.StatusOK, "container.html", "container")
-}
-
-// GET /watch/:show/:season/:episode
-func getShow(c echo.Context) error {
-	show := c.Param("show")
-	season := c.Param("season")
-	episode := c.Param("episode")
-
-	vid_list := availableVids(show, season, episode)
-	if vid_list {
-
-		return c.Render(http.StatusOK, "episode_view.html", map[string]interface{}{
-			"show":    show,
-			"season":  season,
-			"episode": episode,
-		})
-	}
-	return c.Render(http.StatusNotFound, "404.html", "404 Video not found")
-}
-
-// GET /kanji
-func getJapanese(c echo.Context) error {
-	return c.Render(http.StatusOK, "level_selection.html", "level_selection")
-}
-
-// GET /kanji/:selection/:level
-func getLevel(c echo.Context) error {
-	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s "+
-		"password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname)
-
-	db, err := sql.Open("postgres", psqlInfo)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var sqlQuery string
-
-	switch c.Param("selection") {
-	case "grade":
-		sqlQuery = "SELECT kanj, von, vkun, transl, roma, rememb, jlpt, school FROM info WHERE school = $1"
-	case "jlpt":
-		sqlQuery = "SELECT kanj, von, vkun, transl, roma, rememb, jlpt, school FROM info WHERE jlpt = $1"
-	}
-	rows, err := db.Query(sqlQuery, c.Param("level"))
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	defer rows.Close()
-
-	var entry []string
-
-	for rows.Next() {
-		var kanj string
-		var von string
-		var vkun string
-		var transl string
-		var roma string
-		var rememb string
-		var jlpt string
-		var school string
-
-		if err := rows.Scan(&kanj, &von, &vkun, &transl, &roma, &rememb, &jlpt, &school); err != nil {
-			log.Fatal(err)
-		}
-		entry = append(entry, kanj)
-	}
-
-	if err := rows.Err(); err != nil {
-		log.Fatal(err)
-
-	}
-
-	selection := c.Param("selection")
-	level := c.Param("level")
-	entrymap := map[string]interface{}{"entry": entry, "selection": selection, "level": level}
-
-	return c.Render(http.StatusOK, "kanji_list.html", entrymap) //map[string]interface{}{
-	//	"entry":     entry,
-	//	"selection": selection,
-	//	"level":     level,
-	//})
-
-}
-
-// GET /:selection/:level/:kanji
-func getKanji(c echo.Context) error {
-	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s "+
-		"password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname)
-
-	db, err := sql.Open("postgres", psqlInfo)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// ensure :kanji isn't used as an escaped query like "%e9%9b%a8"
-	uni_kanj, err := url.QueryUnescape(c.Param("kanji"))
-
-	// start list of all in level get
-
-	var sqlQuery string
-
-	switch c.Param("selection") {
-	case "grade":
-		sqlQuery = "SELECT kanj, von, vkun, transl, roma, rememb, jlpt, school FROM info WHERE school = $1"
-	case "jlpt":
-		sqlQuery = "SELECT kanj, von, vkun, transl, roma, rememb, jlpt, school FROM info WHERE jlpt = $1"
-	}
-	rows, err := db.Query(sqlQuery, c.Param("level"))
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	defer rows.Close()
-
-	other_kanj := make(map[string]int)
-	kanj_index := make(map[int]string)
-
-	k_index := 0
-
-	for rows.Next() {
-		var kanj string
-		var von string
-		var vkun string
-		var transl string
-		var roma string
-		var rememb string
-		var jlpt string
-		var school string
-
-		switch err := rows.Scan(&kanj, &von, &vkun, &transl, &roma, &rememb, &jlpt, &school); err {
-		case sql.ErrNoRows:
-			return c.Render(http.StatusNotFound, "404.html", "No rows were found")
-		case nil:
-			//fmt.Println(kanj, von, vkun, transl, roma, rememb, jlpt, school)
-		default:
-			log.Fatal(err)
-		}
-
-		other_kanj[kanj] = k_index
-		kanj_index[k_index] = kanj
-		k_index++
-	}
-
-	if err := rows.Err(); err != nil {
-		log.Fatal(err)
-	}
-
-	// start single kanji definition get
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	singleQuery := "SELECT kanj, von, vkun, transl, roma, rememb, jlpt, school FROM info WHERE kanj = $1"
-	row := db.QueryRow(singleQuery, uni_kanj)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var kanj string
-	var von string
-	var vkun string
-	var transl string
-	var roma string
-	var rememb string
-	var jlpt string
-	var school string
-	var p_index int
-	var n_index int
-	var p_kanj string
-	var n_kanj string
-	var u_level string
-	var u_selection string
-
-	switch err := row.Scan(&kanj, &von, &vkun, &transl, &roma, &rememb, &jlpt, &school); err {
-	case sql.ErrNoRows:
-		// use a 404 here
-		fmt.Println("No rows were returned!")
-	case nil:
-		//		fmt.Println(kanj, von, vkun, transl, roma, rememb, jlpt, school)
-	default:
-		log.Fatal(err)
-	}
-
-	num_items := len(other_kanj)
-
-	p_index = other_kanj[uni_kanj] - 1
-	n_index = other_kanj[uni_kanj] + 1
-
-	// if we're at the beginning of the map, previous should be the last item
-	if p_index < 0 {
-		p_kanj = kanj_index[num_items-1]
-	} else {
-		p_kanj = kanj_index[p_index]
-	}
-
-	// if we reach the end of the map, next should cycle back to the beginning
-	if n_index == num_items {
-		n_kanj = kanj_index[0]
-	} else {
-		n_kanj = kanj_index[n_index]
-	}
-
-	u_level = c.Param("level")
-	u_selection = c.Param("selection")
-
-	entry := map[string]string{
-		"kanj":        kanj,
-		"von":         von,
-		"vkun":        vkun,
-		"transl":      transl,
-		"roma":        roma,
-		"rememb":      rememb,
-		"jlpt":        jlpt,
-		"school":      school,
-		"p_kanj":      p_kanj,
-		"n_kanj":      n_kanj,
-		"u_level":     u_level,
-		"u_selection": u_selection,
-	}
-
-	// TODO regex checking on values of :level and :selection
-	return c.Render(http.StatusOK, "flashcard.html", entry)
-}
-
 // handle any error by attempting to render a custom page for it
 func custom404Handler(err error, c echo.Context) {
 	code := http.StatusInternalServerError
@@ -332,6 +104,16 @@ func getContact(c echo.Context) error {
 	return c.Render(http.StatusOK, "contact.html", nil)
 }
 
+// GET /login
+func getLogin(c echo.Context) error {
+	return c.Render(http.StatusOK, "login.html", nil)
+}
+
+// GET /login
+func getRegister(c echo.Context) error {
+	return c.Render(http.StatusOK, "register.html", nil)
+}
+
 // GET /privacy
 func getPrivacy(c echo.Context) error {
 	return c.Render(http.StatusOK, "privacy.html", nil)
@@ -344,9 +126,14 @@ func getDev(c echo.Context) error {
 
 // POST /post-contact
 func postContact(c echo.Context) error {
+
+	if strings.Contains(c.FormValue("message"), "http") && strings.Contains(c.FormValue("message"), "dedgar.com/") == false {
+		return c.String(http.StatusOK, "Form submitted")
+	}
+
 	TextBody := c.FormValue("name") + "\n" + c.FormValue("email") + "\n" + c.FormValue("message")
 
-	sess, err := session.NewSession(&aws.Config{
+	sess, err := asession.NewSession(&aws.Config{
 		Region: aws.String("us-west-2")},
 	)
 
@@ -462,6 +249,172 @@ func findPosts(dirpath string, extension string) map[string]string {
 	return postmap
 }
 
+func getOauth(filepath string) (id, key string) {
+	filebytes, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		fmt.Println(err)
+	}
+	file_str := string(filebytes)
+
+	id, key = strings.Split(file_str, "\n")[0], strings.Split(file_str, "\n")[1]
+
+	return id, key
+}
+
+func HashPass(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	return string(bytes), err
+}
+
+func createUser(eName, uName, pWord string) {
+	hashed_pw, err := HashPass(pWord)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	new_user := models.User{Email: eName, UName: uName, Password: hashed_pw}
+	DB.NewRecord(new_user)
+	DB.Create(&new_user)
+}
+
+// POST /register
+func postRegister(c echo.Context) error {
+	TextBody := c.FormValue("login") + "\n" + c.FormValue("password")
+	fmt.Println(TextBody)
+
+	if !checkUser(c.FormValue("username")) || checkEmail(c.FormValue("email")) {
+		return c.String(http.StatusOK, "Email address or username already taken, try again!")
+	}
+
+	createUser(c.FormValue("email"), c.FormValue("username"), c.FormValue("password"))
+
+	return c.Redirect(http.StatusPermanentRedirect, "/login")
+}
+
+func checkEmail(eName string) bool {
+	var user models.User
+	var found_e models.User
+
+	DB.Where(&models.User{Email: eName}).First(&user).Scan(&found_e)
+
+	if found_e.Email != "" {
+		fmt.Println("Email already taken!")
+		return false
+	}
+
+	fmt.Println("Email not taken!")
+	return true
+}
+func checkUser(uName string) bool {
+	var user models.User
+	var found_u models.User
+
+	DB.Where(&models.User{UName: uName}).First(&user).Scan(&found_u)
+
+	if found_u.UName != "" {
+		fmt.Println("Username already taken!")
+		return false
+	}
+
+	fmt.Println("Username not taken!")
+	return true
+}
+
+func findUser(uName, pWord string) bool {
+	var user models.User
+	var found_u models.User
+
+	hashed_pw, err := HashPass(pWord)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	DB.Where(&models.User{UName: uName, Password: hashed_pw}).First(&user).Scan(&found_u)
+	fmt.Println(found_u)
+	fmt.Println(found_u.UName, found_u.Password)
+	if found_u.UName == "" || found_u.Password == "" {
+		fmt.Println("Invalid username or password!")
+		return false
+	}
+
+	fmt.Println("found the name!")
+	return true
+}
+
+// POST /login
+func postLogin(c echo.Context) error {
+	if checkUser(c.FormValue("username")) {
+		return c.String(http.StatusOK, "Username not found!")
+	}
+
+	if !findUser(c.FormValue("username"), c.FormValue("password")) {
+		sess, _ := session.Get("session", c)
+		sess.Values["dude_logged_in"] = c.FormValue("username")
+		sess.Values["yepyepyep"] = "true"
+		sess.Save(c.Request(), c.Response())
+
+		return c.Redirect(http.StatusPermanentRedirect, "/")
+	}
+
+	return c.Render(http.StatusUnauthorized, "404.html", "401 not authenticated")
+}
+
+func checkDB() {
+	if !DB.HasTable(&models.User{}) {
+		fmt.Println("Creating users table")
+		DB.CreateTable(&models.User{})
+	}
+}
+
+func ServerHeader() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			//c.Response().Header().Set(echo.HeaderServer, "Echo/3.0")
+			mainCookie(c)
+			fmt.Println("serverheader /admin")
+			sess, _ := session.Get("session", c)
+
+			if sess.Values["authenticated"] == "true" {
+				fmt.Println("in if block")
+				fmt.Println(sess.Values)
+				return next(c)
+			}
+
+			return next(c)
+		}
+	}
+}
+
+func getTrial(c echo.Context) error {
+	sess, _ := session.Get("session", c)
+	logged_in_dude := sess.Values["dude_logged_in"].(string)
+	return c.String(http.StatusOK, logged_in_dude)
+}
+
+func ServerTet(http.Handler) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			fmt.Println("servertest /auth")
+			//c.Response().Header().Set(echo.HeaderServer, "Echo/3.0")
+			return next(c)
+		}
+	}
+}
+
+func mainCookie(c echo.Context) { //error {
+	sess, _ := session.Get("session", c)
+	sess.Options = &sessions.Options{
+		Path:     "/",
+		MaxAge:   86400 * 7,
+		HttpOnly: true,
+	}
+	sess.Values["foo"] = "bar"
+	sess.Values["authenticated"] = "true"
+	sess.Save(c.Request(), c.Response())
+}
+
 func main() {
 	t := &Template{
 		templates: func() *template.Template {
@@ -483,15 +436,33 @@ func main() {
 	e := echo.New()
 	e.Static("/", "static")
 	e.Renderer = t
-	e.HTTPErrorHandler = custom404Handler
+	//e.HTTPErrorHandler = custom404Handler
 	//	e.Pre(middleware.HTTPSWWWRedirect())
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+
+	//admin_group := e.Group("/posts", ServerHeader())
+	//admin_group.Use(ServerHeader())
+	e.Use(session.Middleware(sessions.NewCookieStore([]byte("supersecret"))))
+	e.Use(ServerHeader())
+
+	checkDB()
+
+	//g_id, g_key := getOauth("/secrets/google_auth_creds")
+
+	//		return req.RemoteAddr == "127.0.0.1" || (currentUser.(*models.User) != nil && currentUser.(*models.User).Role == "admin")
+
 	findPosts("./tmpl/posts", ".html")
 	//fmt.Println(findPosts("./tmpl/posts", ".html"))
 	e.GET("/", getMain)
+	e.POST("/", getMain)
 	e.GET("/about", getAbout)
+	e.GET("/register", getRegister)
+	e.POST("/register", postRegister)
+	e.GET("/login", getLogin)
+	e.POST("/login", postLogin)
 	e.GET("/about-us", getAbout)
+	e.GET("/trial", getTrial)
 	e.GET("/contact", getContact)
 	e.GET("/contact-us", getContact)
 	e.GET("/privacy-policy", getPrivacy)
@@ -504,14 +475,6 @@ func main() {
 	e.GET("/posts/", getPostView)
 	e.GET("/post/:postname", getPost)
 	e.GET("/posts/:postname", getPost)
-	e.GET("/watch/:show/:season/:episode", getShow)
-	//	e.GET("/grade/:level", getLevel)
-	e.GET("/kanji", getJapanese)
-	e.GET("/kanji/", getJapanese)
-	e.GET("/kanjitainer", getContainer)
-	e.GET("/kanjitainer/", getContainer)
-	e.GET("/kanji/:selection/:level", getLevel)
-	e.GET("/kanji/:selection/:level/:kanji", getKanji)
 	e.GET("/.well-known/acme-challenge/test", getCert)
 	e.GET("/.well-known/acme-challenge/test/", getCert)
 	e.GET("/.well-known/acme-challenge/:response", getCert)
