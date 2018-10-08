@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"./models"
@@ -30,22 +31,23 @@ import (
 )
 
 const (
-	Sender    = "contact@shinobu.ninja"
-	Recipient = "contact@shinobu.ninja"
-	Subject   = "dedgar contact form submission"
-	CharSet   = "UTF-8"
+	Subject = "dedgar contact form submission"
+	CharSet = "UTF-8"
 )
 
 var (
-	host     = os.Getenv("POSTGRESQL_SERVICE_HOST")
-	port     = os.Getenv("POSTGRESQL_SERVICE_PORT")
-	dbuser   = os.Getenv("POSTGRESQL_USER")
-	dbpass   = os.Getenv("POSTGRESQL_PASSWORD")
-	dbname   = os.Getenv("POSTGRESQL_DATABASE")
-	certacc  = os.Getenv("CERT_ACC")
-	postmap  = make(map[string]string)
-	psqlInfo = fmt.Sprintf("host=%s port=%s user=%s "+"password=%s dbname=%s sslmode=disable", host, port, dbuser, dbpass, dbname)
-	DB, _    = gorm.Open("postgres", psqlInfo)
+	defaultCost, _ = strconv.Atoi(os.Getenv("DEFAULT_COST"))
+	sender         = os.Getenv("ADMIN_EMAIL")
+	recipient      = os.Getenv("ADMIN_EMAIL")
+	host           = os.Getenv("POSTGRESQL_SERVICE_HOST")
+	port           = os.Getenv("POSTGRESQL_SERVICE_PORT")
+	dbUser         = os.Getenv("POSTGRESQL_USER")
+	dbPass         = os.Getenv("POSTGRESQL_PASSWORD")
+	dbName         = os.Getenv("POSTGRESQL_DATABASE")
+	certAcc        = os.Getenv("CERT_ACC")
+	postMap        = make(map[string]string)
+	psqlInfo       = fmt.Sprintf("host=%s port=%s user=%s "+"password=%s dbname=%s sslmode=disable", host, port, dbUser, dbPass, dbName)
+	db, _          = gorm.Open("postgres", psqlInfo)
 )
 
 type Contact struct {
@@ -73,7 +75,7 @@ func availableVids(show string, season string, episode string) bool {
 
 // GET /
 func getMain(c echo.Context) error {
-	return c.Render(http.StatusOK, "main.html", postmap)
+	return c.Render(http.StatusOK, "main.html", postMap)
 }
 
 // handle any error by attempting to render a custom page for it
@@ -91,7 +93,7 @@ func custom404Handler(err error, c echo.Context) {
 
 func getCert(c echo.Context) error {
 	response := c.Param("response")
-	return c.String(http.StatusOK, response+"."+certacc)
+	return c.String(http.StatusOK, response+"."+certAcc)
 }
 
 // GET /about
@@ -143,7 +145,7 @@ func postContact(c echo.Context) error {
 		Destination: &ses.Destination{
 			CcAddresses: []*string{},
 			ToAddresses: []*string{
-				aws.String(Recipient),
+				aws.String(recipient),
 			},
 		},
 		Message: &ses.Message{
@@ -158,7 +160,7 @@ func postContact(c echo.Context) error {
 				Data:    aws.String(Subject),
 			},
 		},
-		Source: aws.String(Sender),
+		Source: aws.String(sender),
 	}
 
 	result, err := svc.SendEmail(input)
@@ -183,7 +185,7 @@ func postContact(c echo.Context) error {
 	fmt.Println(c.FormValue("name"))
 	fmt.Println(c.FormValue("email"))
 	fmt.Println(c.FormValue("message"))
-	fmt.Println("Email Sent to address: " + Recipient)
+	fmt.Println("Email Sent to address: " + recipient)
 	fmt.Println(result)
 	return c.String(http.StatusOK, "Form submitted")
 }
@@ -191,7 +193,7 @@ func postContact(c echo.Context) error {
 // GET /post/:postname
 func getPost(c echo.Context) error {
 	post := c.Param("postname")
-	if _, ok := postmap[post]; ok {
+	if _, ok := postMap[post]; ok {
 		return c.Render(http.StatusOK, post+".html", post)
 	}
 	return c.Render(http.StatusNotFound, "404.html", "404 Post not found")
@@ -199,7 +201,7 @@ func getPost(c echo.Context) error {
 
 // GET /post
 func getPostView(c echo.Context) error {
-	return c.Render(http.StatusOK, "post_view.html", postmap)
+	return c.Render(http.StatusOK, "post_view.html", postMap)
 }
 
 func findSummary(fpath string) string {
@@ -240,13 +242,13 @@ func findPosts(dirpath string, extension string) map[string]string {
 			summary := findSummary(postname)
 			//fmt.Println(summary)
 			//fmt.Println(fmt.Sprintf("%T", summary))
-			postmap[filepath.Base(postname)] = summary
+			postMap[filepath.Base(postname)] = summary
 		}
 		return err
 	}); err != nil {
 		panic(err)
 	}
-	return postmap
+	return postMap
 }
 
 func getOauth(filepath string) (id, key string) {
@@ -262,7 +264,7 @@ func getOauth(filepath string) (id, key string) {
 }
 
 func HashPass(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), defaultCost)
 	return string(bytes), err
 }
 
@@ -274,8 +276,8 @@ func createUser(eName, uName, pWord string) {
 	}
 
 	new_user := models.User{Email: eName, UName: uName, Password: hashed_pw}
-	DB.NewRecord(new_user)
-	DB.Create(&new_user)
+	db.NewRecord(new_user)
+	db.Create(&new_user)
 }
 
 // POST /register
@@ -283,7 +285,7 @@ func postRegister(c echo.Context) error {
 	TextBody := c.FormValue("login") + "\n" + c.FormValue("password")
 	fmt.Println(TextBody)
 
-	if !checkUser(c.FormValue("username")) || checkEmail(c.FormValue("email")) {
+	if userFound(c.FormValue("username")) || emailFound(c.FormValue("email")) {
 		return c.String(http.StatusOK, "Email address or username already taken, try again!")
 	}
 
@@ -292,67 +294,71 @@ func postRegister(c echo.Context) error {
 	return c.Redirect(http.StatusPermanentRedirect, "/login")
 }
 
-func checkEmail(eName string) bool {
+func emailFound(eName string) bool {
 	var user models.User
 	var found_e models.User
 
-	DB.Where(&models.User{Email: eName}).First(&user).Scan(&found_e)
+	db.Where(&models.User{Email: eName}).First(&user).Scan(&found_e)
 
 	if found_e.Email != "" {
-		fmt.Println("Email already taken!")
-		return false
+		fmt.Printf("%s already taken!", found_e.Email)
+		return true
 	}
 
-	fmt.Println("Email not taken!")
-	return true
+	fmt.Printf("%s not taken!", found_e.Email)
+	return false
 }
-func checkUser(uName string) bool {
+
+func userFound(uName string) bool {
 	var user models.User
 	var found_u models.User
 
-	DB.Where(&models.User{UName: uName}).First(&user).Scan(&found_u)
+	db.Where(&models.User{UName: uName}).First(&user).Scan(&found_u)
 
 	if found_u.UName != "" {
-		fmt.Println("Username already taken!")
-		return false
+		fmt.Println("Username found.")
+		return true
 	}
 
-	fmt.Println("Username not taken!")
-	return true
+	fmt.Println("Username not found.")
+	return false
 }
 
-func findUser(uName, pWord string) bool {
+func compareLogin(uName, pWord string) bool {
 	var user models.User
 	var found_u models.User
 
-	hashed_pw, err := HashPass(pWord)
+	db.Where(&models.User{UName: uName}).First(&user).Scan(&found_u)
 
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	DB.Where(&models.User{UName: uName, Password: hashed_pw}).First(&user).Scan(&found_u)
-	fmt.Println(found_u)
-	fmt.Println(found_u.UName, found_u.Password)
-	if found_u.UName == "" || found_u.Password == "" {
+	if found_u.UName == "" {
 		fmt.Println("Invalid username or password!")
 		return false
 	}
 
-	fmt.Println("found the name!")
+	hashedPW := found_u.Password
+
+	err := bcrypt.CompareHashAndPassword([]byte(hashedPW), []byte(pWord))
+
+	if err != nil {
+		log.Fatal(err)
+		fmt.Println("Invalid username or password!")
+		return false
+	}
+
+	fmt.Println("Found login combo matched!")
 	return true
 }
 
 // POST /login
 func postLogin(c echo.Context) error {
-	if checkUser(c.FormValue("username")) {
+	if !userFound(c.FormValue("username")) {
 		return c.String(http.StatusOK, "Username not found!")
 	}
 
-	if !findUser(c.FormValue("username"), c.FormValue("password")) {
+	if compareLogin(c.FormValue("username"), c.FormValue("password")) {
 		sess, _ := session.Get("session", c)
-		sess.Values["dude_logged_in"] = c.FormValue("username")
-		sess.Values["yepyepyep"] = "true"
+		sess.Values["current_user"] = c.FormValue("username")
+		sess.Values["logged_in"] = "true"
 		sess.Save(c.Request(), c.Response())
 
 		return c.Redirect(http.StatusPermanentRedirect, "/")
@@ -362,9 +368,9 @@ func postLogin(c echo.Context) error {
 }
 
 func checkDB() {
-	if !DB.HasTable(&models.User{}) {
+	if !db.HasTable(&models.User{}) {
 		fmt.Println("Creating users table")
-		DB.CreateTable(&models.User{})
+		db.CreateTable(&models.User{})
 	}
 }
 
@@ -389,7 +395,7 @@ func ServerHeader() echo.MiddlewareFunc {
 
 func getTrial(c echo.Context) error {
 	sess, _ := session.Get("session", c)
-	logged_in_dude := sess.Values["dude_logged_in"].(string)
+	logged_in_dude := sess.Values["current_user"].(string)
 	return c.String(http.StatusOK, logged_in_dude)
 }
 
@@ -443,10 +449,10 @@ func main() {
 
 	//admin_group := e.Group("/posts", ServerHeader())
 	//admin_group.Use(ServerHeader())
-	e.Use(session.Middleware(sessions.NewCookieStore([]byte("supersecret"))))
+	e.Use(session.Middleware(sessions.NewCookieStore([]byte(os.Getenv("COOKIE_SECRET")))))
 	e.Use(ServerHeader())
 
-	checkDB()
+	go checkDB()
 
 	//g_id, g_key := getOauth("/secrets/google_auth_creds")
 
