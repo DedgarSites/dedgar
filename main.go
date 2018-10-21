@@ -28,6 +28,9 @@ import (
 
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo/middleware"
+
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 )
 
 const (
@@ -36,18 +39,29 @@ const (
 )
 
 var (
-	defaultCost, _ = strconv.Atoi(os.Getenv("DEFAULT_COST"))
-	sender         = os.Getenv("ADMIN_EMAIL")
-	recipient      = os.Getenv("ADMIN_EMAIL")
-	host           = os.Getenv("POSTGRESQL_SERVICE_HOST")
-	port           = os.Getenv("POSTGRESQL_SERVICE_PORT")
-	dbUser         = os.Getenv("POSTGRESQL_USER")
-	dbPass         = os.Getenv("POSTGRESQL_PASSWORD")
-	dbName         = os.Getenv("POSTGRESQL_DATABASE")
-	certAcc        = os.Getenv("CERT_ACC")
-	postMap        = make(map[string]string)
-	psqlInfo       = fmt.Sprintf("host=%s port=%s user=%s "+"password=%s dbname=%s sslmode=disable", host, port, dbUser, dbPass, dbName)
-	db, _          = gorm.Open("postgres", psqlInfo)
+	defaultCost, _    = strconv.Atoi(os.Getenv("DEFAULT_COST"))
+	sender            = os.Getenv("ADMIN_EMAIL")
+	recipient         = os.Getenv("ADMIN_EMAIL")
+	host              = os.Getenv("POSTGRESQL_SERVICE_HOST")
+	port              = os.Getenv("POSTGRESQL_SERVICE_PORT")
+	dbUser            = os.Getenv("POSTGRESQL_USER")
+	dbPass            = os.Getenv("POSTGRESQL_PASSWORD")
+	dbName            = os.Getenv("POSTGRESQL_DATABASE")
+	certAcc           = os.Getenv("CERT_ACC")
+	postMap           = make(map[string]string)
+	psqlInfo          = fmt.Sprintf("host=%s port=%s user=%s "+"password=%s dbname=%s sslmode=disable", host, port, dbUser, dbPass, dbName)
+	db, _             = gorm.Open("postgres", psqlInfo)
+	g_id, g_key       = getOauth("/home/codemaya/ansible/google_auth_creds")
+	oauthStateString  = "random"
+	googleOauthConfig = &oauth2.Config{
+		ClientID:     g_id,
+		ClientSecret: g_key,
+		RedirectURL:  "http://127.0.0.1:8080/oauth/callback",
+		Scopes: []string{
+			"https://www.googleapis.com/auth/userinfo.email",
+		},
+		Endpoint: google.Endpoint,
+	}
 )
 
 type Contact struct {
@@ -62,6 +76,40 @@ type Template struct {
 
 func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
 	return t.templates.ExecuteTemplate(w, name, data)
+}
+
+func handleGoogleCallback(c echo.Context) error {
+	state := c.QueryParam("state")
+	if state != oauthStateString {
+		fmt.Printf("invalid oauth state, expected '%s', got '%s'\n", oauthStateString, state)
+		return c.Redirect(http.StatusTemporaryRedirect, "/")
+	}
+
+	code := c.QueryParam("code")
+	token, err := googleOauthConfig.Exchange(oauth2.NoContext, code)
+	if err != nil {
+		fmt.Printf("Code exchange failed with '%s'\n", err)
+		return c.Redirect(http.StatusTemporaryRedirect, "/")
+	}
+
+	fmt.Println("accessToken", token.AccessToken)
+
+	response, err := http.Get("https://www.googleapis.com/oauth2/v2/userinfo?access_token=" + token.AccessToken)
+	if err != nil {
+		fmt.Println("error getting response")
+		fmt.Println(err)
+	}
+
+	defer response.Body.Close()
+	contents, err := ioutil.ReadAll(response.Body)
+	fmt.Println(string(contents))
+	return c.String(200, string(contents)+`
+*** validate token: https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=`+token.AccessToken)
+}
+
+func handleGoogleLogin(c echo.Context) error {
+	url := googleOauthConfig.AuthCodeURL(oauthStateString)
+	return c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
 // only return true if the url maps to a file in our specific hierarchy
@@ -124,6 +172,15 @@ func getPrivacy(c echo.Context) error {
 // GET /dev
 func getDev(c echo.Context) error {
 	return c.Render(http.StatusOK, "dev.html", nil)
+}
+
+// GET /graph
+func getGraph(c echo.Context) error {
+	sess, _ := session.Get("session", c)
+	if _, ok := sess.Values["current_user"].(string); ok {
+		return c.Render(http.StatusOK, "graph_a.html", nil)
+	}
+	return c.Redirect(http.StatusPermanentRedirect, "/login")
 }
 
 // POST /post-contact
@@ -196,7 +253,7 @@ func getPost(c echo.Context) error {
 	if _, ok := postMap[post]; ok {
 		return c.Render(http.StatusOK, post+".html", post)
 	}
-	return c.Render(http.StatusNotFound, "404.html", "404 Post not found")
+	return c.Render(http.StatusNotFound, "e04.html", "404 Post not found")
 }
 
 // GET /post
@@ -340,8 +397,8 @@ func compareLogin(uName, pWord string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPW), []byte(pWord))
 
 	if err != nil {
-		log.Fatal(err)
 		fmt.Println("Invalid username or password!")
+		fmt.Println(err)
 		return false
 	}
 
@@ -446,6 +503,7 @@ func main() {
 	//	e.Pre(middleware.HTTPSWWWRedirect())
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	e.Use(middleware.CORS())
 
 	//admin_group := e.Group("/posts", ServerHeader())
 	//admin_group.Use(ServerHeader())
@@ -453,8 +511,6 @@ func main() {
 	e.Use(ServerHeader())
 
 	go checkDB()
-
-	//g_id, g_key := getOauth("/secrets/google_auth_creds")
 
 	//		return req.RemoteAddr == "127.0.0.1" || (currentUser.(*models.User) != nil && currentUser.(*models.User).Role == "admin")
 
@@ -467,8 +523,11 @@ func main() {
 	e.POST("/register", postRegister)
 	e.GET("/login", getLogin)
 	e.POST("/login", postLogin)
+	e.GET("/login/google", handleGoogleLogin)
+	e.GET("/oauth/callback", handleGoogleCallback)
 	e.GET("/about-us", getAbout)
 	e.GET("/trial", getTrial)
+	e.GET("/graph", getGraph)
 	e.GET("/contact", getContact)
 	e.GET("/contact-us", getContact)
 	e.GET("/privacy-policy", getPrivacy)

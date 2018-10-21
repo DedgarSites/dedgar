@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<title>Dedgar Graph</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.4.0/Chart.min.js"></script>
+{{template "header.html"}}
+<body>
+{{template "navbar.html"}}
+<div class="w3-content" style="max-width:900px;margin-top:75px">
+<canvas id="myChart"></canvas>
+
+</div>
+</body>
+{{template "footer.html"}}
+<script>
+var ctx = document.getElementById('myChart').getContext('2d');
+var chart = new Chart(ctx, {
+    // The type of chart we want to create
+    type: 'line',
+
+    // The data for our dataset
+    data: {
+        labels: ["January", "February", "March", "April", "May", "June", "July"],
+        datasets: [{
+            label: "My First dataset",
+            backgroundColor: 'rgb(255, 99, 132)',
+            borderColor: 'rgb(255, 99, 132)',
+            data: [0, 10, 5, 2, 20, 30, 45],
+        }]
+    },
+
+    // Configuration options go here
+    options: {}
+});
+</script>
