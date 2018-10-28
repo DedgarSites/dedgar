@@ -103,8 +103,7 @@ func handleGoogleCallback(c echo.Context) error {
 	defer response.Body.Close()
 	contents, err := ioutil.ReadAll(response.Body)
 	fmt.Println(string(contents))
-	return c.String(200, string(contents)+`
-*** validate token: https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=`+token.AccessToken)
+	return c.String(200, string(contents)+`https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=`+token.AccessToken)
 }
 
 func handleGoogleLogin(c echo.Context) error {
@@ -178,9 +177,23 @@ func getDev(c echo.Context) error {
 func getGraph(c echo.Context) error {
 	sess, _ := session.Get("session", c)
 	if _, ok := sess.Values["current_user"].(string); ok {
-		return c.Render(http.StatusOK, "graph_a.html", nil)
+		graphGet := map[string]int{"January": 100, "February": 200, "March": 300, "April": 400, "May": 500, "June": 600, "July": 700, "August": 800, "September": 900, "October": 1000, "November": 1100, "December": 1200}
+
+		graphMap := map[string]interface{}{"graphMap": graphGet}
+		return c.Render(http.StatusOK, "graph_a.html", graphMap)
 	}
 	return c.Redirect(http.StatusPermanentRedirect, "/login")
+}
+
+// GET /api/graph
+func getApiGraph(c echo.Context) error {
+	callback := c.QueryParam("callback")
+	month := []string{"January", "February", "March", "April", "May"} //, "June", "July", "August", "September", "October", "November", "December"}
+	content := make(map[string]int)
+	for i, item := range month {
+		content[item] = (i + 1) * 300
+	}
+	return c.JSONP(http.StatusOK, callback, &content)
 }
 
 // POST /post-contact
@@ -528,6 +541,7 @@ func main() {
 	e.GET("/about-us", getAbout)
 	e.GET("/trial", getTrial)
 	e.GET("/graph", getGraph)
+	e.GET("/api/graph", getApiGraph)
 	e.GET("/contact", getContact)
 	e.GET("/contact-us", getContact)
 	e.GET("/privacy-policy", getPrivacy)
