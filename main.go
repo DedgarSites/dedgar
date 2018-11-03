@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -102,7 +103,27 @@ func handleGoogleCallback(c echo.Context) error {
 
 	defer response.Body.Close()
 	contents, err := ioutil.ReadAll(response.Body)
-	fmt.Println(string(contents))
+	if err != nil {
+		fmt.Println("error reading response")
+		fmt.Println(err)
+	}
+
+	var gUser models.GoogleUser
+	err = json.Unmarshal(contents, &gUser)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	if gUser.VerifiedEmail == true && strings.HasSuffix(gUser.Email, "@gmail.com") {
+		sess, _ := session.Get("session", c)
+		sess.Values["google_logged_in"] = gUser.Email
+		sess.Save(c.Request(), c.Response())
+
+		graphGet := map[string]int{"January": 100, "February": 200, "March": 300, "April": 400, "May": 500, "June": 600, "July": 700, "August": 800, "September": 900, "October": 1000, "November": 1100, "December": 1200}
+		graphMap := map[string]interface{}{"graphMap": graphGet}
+
+		return c.Render(http.StatusOK, "graph_a.html", graphMap)
+	}
 	return c.String(200, string(contents)+`https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=`+token.AccessToken)
 }
 
@@ -463,9 +484,11 @@ func ServerHeader() echo.MiddlewareFunc {
 	}
 }
 
+// GET /trial
 func getTrial(c echo.Context) error {
 	sess, _ := session.Get("session", c)
-	logged_in_dude := sess.Values["current_user"].(string)
+	//logged_in_dude := sess.Values["current_user"].(string)
+	logged_in_dude := sess.Values["google_logged_in"].(string)
 	return c.String(http.StatusOK, logged_in_dude)
 }
 
