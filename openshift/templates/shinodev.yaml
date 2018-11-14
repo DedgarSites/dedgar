@@ -2,46 +2,48 @@
 kind: Template
 apiVersion: v1
 metadata:
-  name: shinobu
+  name: dedgar
   annotations:
-    description: Shinobu dev site deployment, written in Golang
-    tags: quickstart,golang,shinobu
+    description: Dedgar site deployment, written in Golang
+    tags: quickstart,golang,dedgar
     iconClass: icon-golang
 labels:
-  template: shinobu
+  template: dedgar
 objects:
 - kind: Service
   apiVersion: v1
   metadata:
-    name: shinobu
+    name: dedgar
     annotations:
       description: Exposes and load balances the application pods
   spec:
     ports:
-    - name: web
-      port: 8080
-      targetPort: 8080
+    - name: 443-tcp
+      port: 443
+      targetPort: 8443
     selector:
-      name: shinobu
+      name: dedgar
 - kind: Route
   apiVersion: v1
   metadata:
-    name: shinobu
+    name: dedgar
   spec:
     host: "${APPLICATION_DOMAIN}"
+    tls:
+      termination: passthrough
     to:
       kind: Service
-      name: shinobu
+      name: dedgar
 - kind: ImageStream
   apiVersion: v1
   metadata:
-    name: shinobu
+    name: dedgar
     annotations:
       description: Keeps track of changes in the application image
 - kind: BuildConfig
   apiVersion: v1
   metadata:
-    name: shinobu
+    name: dedgar
     annotations:
       description: Defines how to build the application
   spec:
@@ -56,7 +58,7 @@ objects:
     output:
       to:
         kind: DockerImage
-        name: dedgar/shinodev:1.0
+        name: dedgar/dedgar:1.0
     triggers:
     - type: ConfigChange
     - type: GitHub
@@ -67,7 +69,7 @@ objects:
 - kind: DeploymentConfig
   apiVersion: v1
   metadata:
-    name: shinobu
+    name: dedgar
     annotations:
       description: Defines how to deploy the application server
   spec:
@@ -78,42 +80,58 @@ objects:
       imageChangeParams:
         automatic: true
         containerNames:
-        - shinobu
+        - dedgar
         from:
           kind: ImageStreamTag
-          name: shinobu:latest
+          name: dedgar:latest
     - type: ConfigChange
     replicas: 1
     selector:
-      name: shinobu
+      name: dedgar
     template:
       metadata:
-        name: shinobu
+        name: dedgar
         labels:
-          name: shinobu
+          name: dedgar
       spec:
         containers:
-        - name: shinobu
-          image: shinobu
+        - name: dedgar
+          image: dedgar
           ports:
           - containerPort: 8080
           volumeMounts:
           - mountPath: /opt/app-root/src/.aws
-            name: shinobu-secrets
+            name: dedgar-secrets
+          - mountPath: /cert
+            name: certpv
         volumes:
-        - name: shinobu-secrets
+        - name: dedgar-secrets
           secret:
-          secretName: shinobu-secrets
+          secretName: dedgar-secrets
+        - name: certpv
+          persistentVolumeClaim:
+            claimName: certpv
+- kind: "PersistentVolumeClaim"
+  apiVersion: "v1"
+  metadata:
+    name: "certpv"
+  spec:
+    accessModes:
+      - "ReadWriteOnce"
+    resources:
+      requests:
+        storage: "1Gi"
+    volumeName: "certpv"
 parameters:
 - name: SOURCE_REPOSITORY_URL
   description: The URL of the repository with your application source code
-  value: https://github.com/xshinobu/shinodev
+  value: https://github.com/dedgarsites/dedgar
 - name: SOURCE_REPOSITORY_REF
   description: Set this to a branch name, tag or other ref of your repository if you are not using the default branch
 - name: CONTEXT_DIR
   description: Set this to the relative path to your project if it is not in the root of your repository
 - name: APPLICATION_DOMAIN
-  description: The exposed hostname that will route to the Beego service
+  description: The exposed hostname that will route to the service
   value: ''
 - name: GITHUB_WEBHOOK_SECRET
   description: A secret string used to configure the GitHub webhook

@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	"./models"
+	"github.com/dedgarsites/dedgar/models"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -25,6 +25,7 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo-contrib/session"
+	"golang.org/x/crypto/acme/autocert"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/gorilla/sessions"
@@ -40,19 +41,21 @@ const (
 )
 
 var (
-	defaultCost, _    = strconv.Atoi(os.Getenv("DEFAULT_COST"))
-	sender            = os.Getenv("ADMIN_EMAIL")
-	recipient         = os.Getenv("ADMIN_EMAIL")
-	host              = os.Getenv("POSTGRESQL_SERVICE_HOST")
-	port              = os.Getenv("POSTGRESQL_SERVICE_PORT")
-	dbUser            = os.Getenv("POSTGRESQL_USER")
-	dbPass            = os.Getenv("POSTGRESQL_PASSWORD")
-	dbName            = os.Getenv("POSTGRESQL_DATABASE")
-	certAcc           = os.Getenv("CERT_ACC")
-	postMap           = make(map[string]string)
-	psqlInfo          = fmt.Sprintf("host=%s port=%s user=%s "+"password=%s dbname=%s sslmode=disable", host, port, dbUser, dbPass, dbName)
-	db, _             = gorm.Open("postgres", psqlInfo)
-	g_id, g_key       = getOauth("/home/codemaya/ansible/google_auth_creds")
+	defaultCost, _ = strconv.Atoi(os.Getenv("DEFAULT_COST"))
+	sender         = os.Getenv("ADMIN_EMAIL")
+	recipient      = os.Getenv("ADMIN_EMAIL")
+	g_id           = os.Getenv("OAUTH_ID")
+	g_key          = os.Getenv("OAUTH_KEY")
+	host           = os.Getenv("POSTGRESQL_SERVICE_HOST")
+	port           = os.Getenv("POSTGRESQL_SERVICE_PORT")
+	dbUser         = os.Getenv("POSTGRESQL_USER")
+	dbPass         = os.Getenv("POSTGRESQL_PASSWORD")
+	dbName         = os.Getenv("POSTGRESQL_DATABASE")
+	certAcc        = os.Getenv("CERT_ACC")
+	postMap        = make(map[string]string)
+	psqlInfo       = fmt.Sprintf("host=%s port=%s user=%s "+"password=%s dbname=%s sslmode=disable", host, port, dbUser, dbPass, dbName)
+	db, _          = gorm.Open("postgres", psqlInfo)
+	//g_id, g_key       = getOauth("/home/codemaya/ansible/google_auth_creds")
 	oauthStateString  = "random"
 	googleOauthConfig = &oauth2.Config{
 		ClientID:     g_id,
@@ -540,6 +543,7 @@ func main() {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
+	e.AutoTLSManager.Cache = autocert.DirCache("/cert/.cache")
 
 	//admin_group := e.Group("/posts", ServerHeader())
 	//admin_group.Use(ServerHeader())
@@ -547,8 +551,6 @@ func main() {
 	e.Use(ServerHeader())
 
 	go checkDB()
-
-	//		return req.RemoteAddr == "127.0.0.1" || (currentUser.(*models.User) != nil && currentUser.(*models.User).Role == "admin")
 
 	findPosts("./tmpl/posts", ".html")
 	//fmt.Println(findPosts("./tmpl/posts", ".html"))
@@ -577,14 +579,14 @@ func main() {
 	e.GET("/posts/", getPostView)
 	e.GET("/post/:postname", getPost)
 	e.GET("/posts/:postname", getPost)
-	e.GET("/.well-known/acme-challenge/test", getCert)
-	e.GET("/.well-known/acme-challenge/test/", getCert)
-	e.GET("/.well-known/acme-challenge/:response", getCert)
-	e.GET("/.well-known/acme-challenge/:response/", getCert)
-	e.GET("/well-known/acme-challenge/:response", getCert)
-	e.GET("/well-known/acme-challenge/:response/", getCert)
+	//e.GET("/.well-known/acme-challenge/test", getCert)
+	//e.GET("/.well-known/acme-challenge/test/", getCert)
+	//e.GET("/.well-known/acme-challenge/:response", getCert)
+	//e.GET("/.well-known/acme-challenge/:response/", getCert)
+	//e.GET("/well-known/acme-challenge/:response", getCert)
+	//e.GET("/well-known/acme-challenge/:response/", getCert)
 	e.File("/robots.txt", "static/public/robots.txt")
 	e.File("/sitemap.xml", "static/public/sitemap.xml")
-	e.Logger.Info(e.Start(":8080"))
-	//	e.Logger.Info(e.StartAutoTLS(":443"))
+	//e.Logger.Info(e.Start(":8080"))
+	e.Logger.Info(e.StartAutoTLS(":8443"))
 }
