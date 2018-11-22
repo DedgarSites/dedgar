@@ -138,7 +138,7 @@ func handleGoogleLogin(c echo.Context) error {
 // only return true if the url maps to a file in our specific hierarchy
 // can be replaced with a
 func availableVids(show string, season string, episode string) bool {
-	if _, err := os.Stat("./static/vid/" + show + "/" + season + "/" + episode + ".mp4"); err == nil {
+	if _, err := os.Stat("/usr/local/bin/static/vid/" + show + "/" + season + "/" + episode + ".mp4"); err == nil {
 		return true
 	}
 	return false
@@ -521,7 +521,7 @@ func main() {
 	t := &Template{
 		templates: func() *template.Template {
 			tmpl := template.New("")
-			if err := filepath.Walk("./tmpl", func(path string, info os.FileInfo, err error) error {
+			if err := filepath.Walk("/usr/local/bin/tmpl", func(path string, info os.FileInfo, err error) error {
 				if strings.HasSuffix(path, ".html") {
 					_, err = tmpl.ParseFiles(path)
 					if err != nil {
@@ -539,10 +539,10 @@ func main() {
 	e.Static("/", "static")
 	e.Renderer = t
 	//e.HTTPErrorHandler = custom404Handler
-	//	e.Pre(middleware.HTTPSWWWRedirect())
+	//e.Pre(middleware.HTTPSWWWRedirect())
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-	e.Use(middleware.CORS())
+	//e.Use(middleware.CORS())
 	e.AutoTLSManager.Cache = autocert.DirCache("/cert/.cache")
 
 	//admin_group := e.Group("/posts", ServerHeader())
@@ -552,8 +552,8 @@ func main() {
 
 	go checkDB()
 
-	findPosts("./tmpl/posts", ".html")
-	//fmt.Println(findPosts("./tmpl/posts", ".html"))
+	findPosts("/usr/local/bin/tmpl/posts", ".html")
+	//fmt.Println(findPosts("/usr/local/bin/tmpl/posts", ".html"))
 	e.GET("/", getMain)
 	e.POST("/", getMain)
 	e.GET("/about", getAbout)
