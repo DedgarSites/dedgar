@@ -25,7 +25,6 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo-contrib/session"
-	"golang.org/x/crypto/acme/autocert"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/gorilla/sessions"
@@ -527,6 +526,7 @@ func main() {
 					if err != nil {
 						log.Println(err)
 					}
+					//fmt.Println(path)
 				}
 				return err
 			}); err != nil {
@@ -536,14 +536,13 @@ func main() {
 		}(),
 	}
 	e := echo.New()
-	e.Static("/", "static")
+	e.Static("/", "/usr/local/bin/static")
 	e.Renderer = t
 	//e.HTTPErrorHandler = custom404Handler
-	//e.Pre(middleware.HTTPSWWWRedirect())
+	e.Pre(middleware.HTTPSWWWRedirect())
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-	//e.Use(middleware.CORS())
-	e.AutoTLSManager.Cache = autocert.DirCache("/cert/.cache")
+	e.Use(middleware.CORS())
 
 	//admin_group := e.Group("/posts", ServerHeader())
 	//admin_group.Use(ServerHeader())
@@ -579,14 +578,9 @@ func main() {
 	e.GET("/posts/", getPostView)
 	e.GET("/post/:postname", getPost)
 	e.GET("/posts/:postname", getPost)
-	//e.GET("/.well-known/acme-challenge/test", getCert)
-	//e.GET("/.well-known/acme-challenge/test/", getCert)
-	//e.GET("/.well-known/acme-challenge/:response", getCert)
-	//e.GET("/.well-known/acme-challenge/:response/", getCert)
-	//e.GET("/well-known/acme-challenge/:response", getCert)
-	//e.GET("/well-known/acme-challenge/:response/", getCert)
 	e.File("/robots.txt", "static/public/robots.txt")
 	e.File("/sitemap.xml", "static/public/sitemap.xml")
 	//e.Logger.Info(e.Start(":8080"))
-	e.Logger.Info(e.StartAutoTLS(":8443"))
+	//e.Logger.Info(e.StartAutoTLS(":8443"))
+	e.Logger.Info(e.StartTLS(":8443", "/cert/lego/certificates/dedgar.crt", "/cert/lego/certificates/dedgar.key"))
 }
