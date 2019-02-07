@@ -35,7 +35,7 @@ func (t *Template) Render(w io.Writer, name string, data interface{}, c echo.Con
 
 func init() {
 	if sitePath == "" {
-		sitePath = "/usr/local/bin"
+		sitePath = "."
 	}
 	t := &Template{
 		templates: func() *template.Template {
