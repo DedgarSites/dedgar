@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/dedgarsites/dedgar/datastores"
+	"github.com/dedgarsites/dedgar/tree"
 
 	"github.com/labstack/echo"
 	"github.com/labstack/echo-contrib/session"
@@ -19,7 +20,40 @@ import (
 	"net/http"
 )
 
-// GET /
+type filePath struct {
+	Path string
+}
+
+// GET tree
+func GetTree(c echo.Context) error {
+	//ptree := tree.RootFolder
+	return c.Render(http.StatusOK, "tree.html", tree.RootFolder)
+}
+
+// GET tree
+func GetTreeAll(c echo.Context) error {
+	// TODO check PostMap before continuing with recursive logic
+	for i, item := range c.ParamValues() {
+		fmt.Println(i, item)
+	}
+	tempFolder := tree.RootFolder
+
+	if strings.HasSuffix(c.ParamValues()[0], "/") {
+		path := strings.Split(c.ParamValues()[0], "/")
+		for _, dir := range path {
+			foundFolder := tree.FindNode(tempFolder, dir)
+			if foundFolder.Name != "" {
+				tempFolder = foundFolder
+			}
+		}
+	}
+	if tempFolder.Name != "" {
+		return c.Render(http.StatusOK, "tree.html", tempFolder)
+	}
+	return c.Render(http.StatusNotFound, "e04.html", "404 Folder not found")
+}
+
+// GET /all/*
 func GetMain(c echo.Context) error {
 	return c.Render(http.StatusOK, "main.html", datastores.PostMap)
 }

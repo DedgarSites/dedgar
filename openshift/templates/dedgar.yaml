@@ -58,7 +58,7 @@ objects:
     output:
       to:
         kind: DockerImage
-        name: dedgar/dedgar:1.0
+        name: quay.io/dedgar/dedgar
     triggers:
     - type: ConfigChange
     - type: GitHub

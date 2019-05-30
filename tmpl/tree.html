@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<link href="/css/common.css" rel="stylesheet" />
+<link href="/css/base.css" rel="stylesheet" />
+<html lang="en">
+<head>
+    <title>Kanji List</title>
+</head>
+<body>
+    {{define "main"}}
+    <div id="post">                                              
+        {{.Name}}  
+        {{.Files}}
+        {{template "folders" .Folders}}
+    </div>
+    {{end}}
+
+    {{define "folders"}}
+        {{if .}}
+            <ul>
+            {{range . }}                                  
+                <li class="post">                                         
+                <div class="postHead">                           
+                    <div class="postTitle"><b>{{.Name}}</b></div>
+                </div>
+
+                {{ $fold := .Folders }}
+                {{range $fol := $fold }}
+                    <div class="postBody">{{$fol.Name}}/</div>
+                {{end}}
+
+                {{ $file := .Files }}
+                {{range $fil := $file }}
+                    <div class="postBody">{{$fil.Name}}</div>
+                {{end}}
+                
+                {{template "folders" .Folders}}
+                </li>
+            {{end}}
+            </ul>
+        {{end}}
+    {{end}}
+    {{template "main" .}}
+</body>
+</html>
