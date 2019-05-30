@@ -107,7 +107,7 @@ objects:
         volumes:
         - name: dedgar-secrets
           secret:
-          secretName: dedgar-secrets
+            secretName: dedgar-secrets
         - name: certpv
           persistentVolumeClaim:
             claimName: certpv
