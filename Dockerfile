@@ -4,7 +4,7 @@ ENV GOPATH=/go
 
 ENV PATH=$GOPATH/bin:/usr/local/go/bin:$PATH
 
-COPY lego start.sh static/ tmpl/ /usr/local/bin/
+COPY go-wrapper lego start.sh static/ tmpl/ /usr/local/bin/
 
 RUN mkdir -p /go/src/github.com/dedgarsites/dedgar
 WORKDIR /go/src/github.com/dedgarsites/dedgar
