@@ -11,8 +11,7 @@ fi
 
 if [ "$LEGO_CERT" = "true" ] ; then
   echo "running Lego to check if our certificates need to be renewed"
-  #/usr/local/bin/lego --tls=":8443" --email="contact@shinobu.ninja" --domains="www.shinobu.ninja" --path="/cert/lego" --filename="shinobu" --accept-tos --exclude="http-01" run
-  /usr/local/bin/lego --tls=":8443" --email="dedgarsite@shinobu.ninja" --domains="www.dedgar.com" --path="/cert/lego" --filename="dedgar" --accept-tos --exclude="http-01" run
+  /usr/local/bin/lego --tls=true --tls.port=":8443" --email="dedgarsite@shinobu.ninja" --domains="www.dedgar.com" --path="/cert/lego" --filename="dedgar" --accept-tos run
   sleep 10
 fi
 
