@@ -17,4 +17,4 @@ fi
 
 echo
 echo "running Echo with the certs in /cert"
-/usr/local/bin/dedgar
+/go/bin/dedgar
