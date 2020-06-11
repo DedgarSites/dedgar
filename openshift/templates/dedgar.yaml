@@ -100,6 +100,18 @@ objects:
             value: "false"
           - name: LEGO_CERT
             value: "true"
+          - name: TLS_PORT
+            value: "${TLS_PORT}"
+          - name: CERT_EMAIL
+            value: "${CERT_EMAIL}"
+          - name: APP_DOMAIN
+            value: "${APP_DOMAIN}"
+          - name: CERT_PATH
+            value: "${CERT_PATH}"
+          - name: CERT_FILENAME
+            value: "${CERT_FILENAME}"
+          - name: CERT_SERVER
+            value: "${CERT_SERVER}"
           ports:
           - containerPort: "${TLS_PORT}" 
           volumeMounts:

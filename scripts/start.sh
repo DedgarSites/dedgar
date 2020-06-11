@@ -24,4 +24,4 @@ fi
 
 echo
 echo "Starting web server with the certs in $CERT_PATH"
-/go/bin/"$WEB_BINARY"
+/go/bin/"$APP_NAME"
