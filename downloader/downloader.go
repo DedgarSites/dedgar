@@ -1,6 +1,7 @@
 package downloader
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -13,10 +14,21 @@ func FileFromURL(baseURL, filePath string, fileName ...string) error {
 		dest := path.Join(filePath, file)
 		fullURL := path.Join(baseURL, file)
 
-		resp, err := http.Get(fullURL)
+		req, err := http.NewRequest("POST", fullURL, nil)
 		if err != nil {
-			return err
+			fmt.Printf("Error getting pod info: %v \n", err)
 		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json")
+
+		client := &http.Client{}
+		//client := &http.Client{Transport: httpClientWithSelfSignedTLS}
+
+		resp, err := client.Do(req)
+		if err != nil {
+			fmt.Printf("makeClient: Error making API request: %v", err)
+		}
+
 		defer resp.Body.Close()
 
 		err = os.MkdirAll(filePath, os.ModePerm)
