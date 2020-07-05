@@ -2,14 +2,29 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
+	"github.com/dedgarsites/dedgar/downloader"
 	"github.com/dedgarsites/dedgar/routers"
+)
+
+var (
+	certFile    = os.Getenv("CERT_FILE")
+	keyFile     = os.Getenv("KEY_FILE")
+	downloadURL = os.Getenv("DOWNLOAD_URL")
+	filePath    = os.Getenv("TLS_FILE_PATH")
 )
 
 func main() {
 	e := routers.Routers
+
+	err := downloader.FileFromURL(downloadURL, filePath, certFile, keyFile)
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	if localPort := os.Getenv("LOCAL_TESTING"); localPort != "" {
 		e.Logger.Info(e.Start(":" + localPort))
 	} else {
@@ -21,6 +36,6 @@ func main() {
 			}
 		}()
 
-		e.Logger.Info(e.StartTLS(":8443", "/cert/lego/certificates/dedgar.crt", "/cert/lego/certificates/dedgar.key"))
+		e.Logger.Info(e.StartTLS(":8443", filePath+certFile, filePath+keyFile))
 	}
 }

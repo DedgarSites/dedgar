@@ -20,7 +20,7 @@ objects:
     ports:
     - name: 443-tcp
       port: 443
-      targetPort: "${TLS_PORT}"
+      targetPort: ${TLS_PORT}
     selector:
       name: dedgar
 - kind: Route
@@ -31,7 +31,7 @@ objects:
     name: dedgar
     namespace: dedgar
   spec:
-    host: "${APP_DOMAIN}"
+    host: ${APP_DOMAIN}
     port:
       targetPort: 443-tcp
     tls:
@@ -55,10 +55,10 @@ objects:
       local: false
     tags:
     - annotations:
-        openshift.io/imported-from: dedgar/"${APP_NAME}":latest
+        openshift.io/imported-from: dedgar/${APP_NAME}:latest
       from:
         kind: DockerImage
-        name: quay.io/dedgar/"${APP_NAME}":latest
+        name: quay.io/dedgar/${APP_NAME}:latest
       importPolicy:
         scheduled: true
       name: "latest"
@@ -112,6 +112,14 @@ objects:
             value: "${CERT_FILENAME}"
           - name: CERT_SERVER
             value: "${CERT_SERVER}"
+          - name: CERT_FILE
+            value: "${CERT_FILE}"
+          - name: KEY_FILE
+            value: "${KEY_FILE}"
+          - name: DOWNLOAD_URL
+            value: "${DOWNLOAD_URL}"
+          - name: TLS_FILE_PATH
+            value: "${TLS_FILE_PATH}"
           ports:
           - containerPort: "${TLS_PORT}" 
           volumeMounts:
@@ -144,10 +152,10 @@ objects:
 parameters:
 - name: APP_DOMAIN
   description: The exposed hostname that will route to the service, and be used with LetsEncrypt 
-  value: 'www.shinobu.ninja'
+  value: 'www.dedgar.com'
 - name: TLS_PORT
   description: Port that the application will use to listen for connections
-  value: '8443'
+  value: 8443
 - name: CERT_EMAIL
   description: The email used with LetsEncrypt
   value: 'contact@shinobu.ninja'
@@ -163,3 +171,15 @@ parameters:
 - name: APP_NAME
   description: The name of the application to run from the start script and pull from the registry
   value: 'dedgar'
+- name: CERT_FILE
+  description: The name of the cert that we'll request from the download server
+  value: 'dedgar.crt'
+- name: KEY_FILE
+  description: The name of the key that we'll request from the download server
+  value: 'dedgar.key'
+- name: DOWNLOAD_URL
+  description: The URL of the certificate download server 
+  value: 'http://cert.dedgar.svc.cluster.local:8080/api/cert'
+- name: TLS_FILE_PATH
+  description: The directory that will hold the TLS .crt and .key files
+  value: '/cert/lego/certificates/'
