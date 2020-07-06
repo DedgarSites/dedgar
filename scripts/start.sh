@@ -10,5 +10,5 @@ if [ "$PAUSE_ON_START" = "true" ] ; then
 fi
 
 echo
-echo "Starting web server with the certs in $CERT_PATH"
+echo "Starting web server:"
 /go/bin/"$APP_NAME"

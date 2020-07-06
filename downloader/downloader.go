@@ -1,6 +1,8 @@
 package downloader
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -8,16 +10,27 @@ import (
 	"path"
 )
 
-// FileFromURL downloads file(s) from baseURL and writes it to the specified filePath.
-func FileFromURL(baseURL, filePath string, fileName ...string) error {
-	for _, file := range fileName {
-		dest := path.Join(filePath, file)
-		fullURL := path.Join(baseURL, file)
+type certFile struct {
+	fileName string
+}
 
-		req, err := http.NewRequest("POST", fullURL, nil)
+// FileFromURL downloads file(s) from baseURL and writes it to the specified filePath.
+func FileFromURL(downloadURL, filePath string, fileName ...string) error {
+	for _, file := range fileName {
+		var cFile certFile
+
+		dest := path.Join(filePath, file)
+
+		jsonStr, err := json.Marshal(cFile)
+		if err != nil {
+			fmt.Println("SendData: Error marshalling json: ", err)
+		}
+
+		req, err := http.NewRequest("POST", downloadURL, bytes.NewBuffer(jsonStr))
 		if err != nil {
 			fmt.Printf("Error getting pod info: %v \n", err)
 		}
+
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Accept", "application/json")
 
