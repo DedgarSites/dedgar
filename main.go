@@ -18,6 +18,8 @@ var (
 )
 
 func main() {
+	fmt.Println("dedgar v0.0.1")
+
 	e := routers.Routers
 
 	err := downloader.FileFromURL(downloadURL, filePath, certFile, keyFile)

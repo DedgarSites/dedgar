@@ -11,7 +11,7 @@ import (
 )
 
 type certFile struct {
-	fileName string
+	FileName string `json:"FileName"`
 }
 
 // FileFromURL downloads file(s) from baseURL and writes it to the specified filePath.
