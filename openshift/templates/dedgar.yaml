@@ -176,7 +176,7 @@ parameters:
   value: 'dedgar.key'
 - name: DOWNLOAD_URL
   description: The URL of the certificate download server 
-  value: 'https://cert.dedgar.svc.cluster.local:8080/api/cert'
+  value: 'https://cert.dedgarsite.svc:443/api/cert'
 - name: TLS_FILE_PATH
   description: The directory that will hold the TLS .crt and .key files
   value: '/cert/'
