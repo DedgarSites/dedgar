@@ -48,34 +48,33 @@ func FileFromURL(downloadURL, filePath string, fileName ...string) error {
 	tr := &http.Transport{TLSClientConfig: config}
 
 	for _, file := range fileName {
-		var cFile certFile
+		cFile := certFile{FileName: file}
+		fmt.Println("searching for", downloadURL, filePath, file)
 
 		dest := path.Join(filePath, file)
 
 		jsonStr, err := json.Marshal(cFile)
 		if err != nil {
-			fmt.Println("SendData: Error marshalling json: ", err)
+			fmt.Println("Error marshalling json: ", err)
 		}
 
 		req, err := http.NewRequest("POST", downloadURL, bytes.NewBuffer(jsonStr))
 		if err != nil {
-			fmt.Printf("Error getting pod info: %v \n", err)
+			fmt.Printf("Error making request: %v \n", err)
 		}
 
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Accept", "application/json")
 
-		//client := &http.Client{}
-		//client := &http.Client{Transport: httpClientWithSelfSignedTLS}
-
 		client := &http.Client{Transport: tr}
 
 		resp, err := client.Do(req)
 		if err != nil {
-			fmt.Printf("makeClient: Error making API request: %v", err)
+			fmt.Printf("Error making API request: %v", err)
 		}
-
 		defer resp.Body.Close()
+
+		fmt.Println(resp.Status, resp.StatusCode)
 
 		err = os.MkdirAll(filePath, os.ModePerm)
 		if err != nil {
