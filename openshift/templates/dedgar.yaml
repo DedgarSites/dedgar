@@ -106,8 +106,8 @@ objects:
             value: "${CERT_EMAIL}"
           - name: APP_DOMAIN
             value: "${APP_DOMAIN}"
-          - name: CERT_PATH
-            value: "${CERT_PATH}"
+          - name: TLS_FILE_PATH
+            value: "${TLS_FILE_PATH}"
           - name: CERT_FILENAME
             value: "${CERT_FILENAME}"
           - name: CERT_SERVER
