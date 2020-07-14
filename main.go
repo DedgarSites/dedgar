@@ -18,8 +18,6 @@ var (
 )
 
 func main() {
-	fmt.Println("dedgar v0.0.1")
-
 	e := routers.Routers
 
 	err := downloader.FileFromURL(downloadURL, filePath, certFile, keyFile)
@@ -31,13 +29,17 @@ func main() {
 		e.Logger.Info(e.Start(":" + localPort))
 	} else {
 		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 24*60*time.Hour)
+			time.Sleep(24 * 60 * time.Hour)
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 			if err := e.Shutdown(ctx); err != nil {
-				e.Logger.Fatal(err)
+				e.Logger.Info(err)
 			}
 		}()
 
+		if _, err := os.Stat("filePath+certFile"); os.IsNotExist(err) {
+			fmt.Println("Cert file does not exist:", err)
+		}
 		e.Logger.Info(e.StartTLS(":8443", filePath+certFile, filePath+keyFile))
 	}
 }

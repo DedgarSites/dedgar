@@ -9,6 +9,10 @@ if [ "$PAUSE_ON_START" = "true" ] ; then
   done
 fi
 
-echo
-echo "Starting web server:"
-/go/bin/"$APP_NAME"
+while true; do
+  echo
+  echo "Starting web server:"
+  /go/bin/"$APP_NAME"
+  echo "Sleeping for a 10 seconds before starting the web server again with new certs."
+  sleep 10
+done
