@@ -37,7 +37,7 @@ func main() {
 			}
 		}()
 
-		if _, err := os.Stat("filePath+certFile"); os.IsNotExist(err) {
+		if _, err := os.Stat(filePath + certFile); os.IsNotExist(err) {
 			fmt.Println("Cert file does not exist:", err)
 		}
 		e.Logger.Info(e.StartTLS(":8443", filePath+certFile, filePath+keyFile))
