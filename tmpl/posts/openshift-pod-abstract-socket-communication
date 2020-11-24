@@ -8,7 +8,7 @@
 <body>
 <div class="w3-content" style="max-width:900px;margin-top:75px">
  <p>
-Abstract sockets are a great way for multiple containers in the same OpenShift or Kubernetes pod to communicate with each other, without using any additional storage volumes or network configuration. Since you can reference the socket in your program like '@my-abstract-socket', you don't have to keep track of mounth paths.
+Abstract sockets are a great way for multiple containers in the same OpenShift or Kubernetes pod to communicate with each other, without using any additional storage volumes or network configuration. Since all the containers in a single OpenShift and Kubernetes pod will share the same IPC namespace by default, you can reference a Unix Domain Socket in your program like '@my-abstract-socket', without having to create and keep track of mounth paths.
 
 &nbsp;
 
@@ -17,36 +17,12 @@ Abstract sockets are a great way for multiple containers in the same OpenShift o
 <hr />
 Some practical examples first, with additional details to follow:
 
-Golang
+Golang - Listening
 <pre>
-package main
+</pre>
 
-import (
-	"fmt"
-	"net/rpc"
-)
-
-func main() {
-	var data []byte // can be a go datatype like a stuct, whatever the RPC server accepts
-	var reply []byte
-
-	client, err := rpc.DialHTTP("unix", "@my-abstract-socket.sock")
-	if err != nil {
-		fmt.Println("Error dialing socket:", err)
-	}
-
-	err = client.Call("someRPCFunctionName", data, &reply)
-	if err != nil {
-		fmt.Println("Error calling the RPC server's function:", err)
-	}
-
-	if len(reply) > 0 {
-		fmt.Println("A reply was returned")
-	} else {
-		fmt.Println("The reply was empty")
-	}
-	fmt.Println(string(reply[:]))
-}
+Golang - Connecting
+<pre>
 </pre>
 
 Python - Listening
@@ -76,14 +52,14 @@ print(inetlist)
   [sconn(fd=3, family=<AddressFamily.AF_INET: 2>, type=<SocketKind.SOCK_STREAM: 1>, laddr=('127.0.0.1', 8080), raddr=(), status='LISTEN', pid=10982)]
 </pre>
 
-Abstract sockets on Linux function the same way as other Unix Domain Sockets, except they don't have a filepath associated with them. Instead, you access them via the '@' symbol. For example, /var/run/crio/crio.sock is the socket file associated with the cri-o Container Runtime Interface, and we would access it from our own programs using that file path. Wheras we might create an abstract socket called 'example.sock' and access it by referring to '@example.sock'; No path needed. Note that it doesn't require a '.sock' extension, we're just keeping up with convention. 
+Abstract sockets on Linux function the same way as other Unix Domain Sockets, except they don't have a filepath associated with them. Instead, you access them via the '@' symbol. For example, /var/run/crio/crio.sock is the socket file associated with the cri-o Container Runtime Interface, and we would access it from our own programs using that file path. Wheras we might create an abstract socket called 'example.sock' and access it by referring to '@example.sock'; No path needed. Note that it doesn't require a '.sock' extension, it's just to keep up with convention. 
 
 
 <ul>
   <li>No need to keep track of another container's socket mount path.</li>
-  <li>Better performance potential and less overhead than TCP socket communication</li>
-  <li></li>
-  <li></li>
+  <li>Better performance potential and less overhead than TCP socket communication.</li>
+  <li>No need to make sure a directory exists and is shared properly with other components or users.</li>
+  <li>No directory permissions or SELinux context to manage. This is less of an issue in containerized workloads, however.</li>
 </ul>
 
 They are super useful for container to container communication. They automatically clean themselves up: the socket no longer appears in the abstract socket namespace when its parent process is no longer running
