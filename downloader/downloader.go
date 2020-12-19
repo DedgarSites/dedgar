@@ -34,7 +34,7 @@ func FileFromURL(downloadURL, filePath string, fileName ...string) error {
 
 	certs, err := ioutil.ReadFile(clusterCABundle)
 	if err != nil {
-		fmt.Printf("Failed to append %q to RootCAs: %v", clusterCABundle, err)
+		fmt.Printf("Failed to append %q to RootCAs: %v \n", clusterCABundle, err)
 	}
 
 	if ok := rootCAs.AppendCertsFromPEM(certs); !ok {
@@ -70,7 +70,7 @@ func FileFromURL(downloadURL, filePath string, fileName ...string) error {
 
 		resp, err := client.Do(req)
 		if err != nil {
-			fmt.Printf("Error making API request: %v", err)
+			fmt.Printf("Error making API request: %v \n", err)
 		}
 		defer resp.Body.Close()
 

@@ -20,14 +20,14 @@ var (
 func main() {
 	e := routers.Routers
 
-	err := downloader.FileFromURL(downloadURL, filePath, certFile, keyFile)
-	if err != nil {
-		fmt.Println(err)
-	}
-
 	if localPort := os.Getenv("LOCAL_TESTING"); localPort != "" {
 		e.Logger.Info(e.Start(":" + localPort))
 	} else {
+		err := downloader.FileFromURL(downloadURL, filePath, certFile, keyFile)
+		if err != nil {
+			fmt.Println(err)
+		}
+
 		go func() {
 			time.Sleep(24 * 60 * time.Hour)
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)

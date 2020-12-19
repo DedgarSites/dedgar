@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+{{template "header.html"}}
+{{template "navbar.html"}}
+<head>
+    <title>abstract sockets</title>
+</head>
+<body>
+<div class="w3-content" style="max-width:900px;margin-top:75px">
+ <p>
+Abstract sockets are a great way for multiple containers in the same OpenShift or Kubernetes pod to communicate with each other, without using any additional storage volumes or network configuration. Since all the containers in a single OpenShift and Kubernetes pod will share the same IPC namespace by default, you can reference a Unix Domain Socket in your program like '@my-abstract-socket', without having to create and keep track of mounth paths.
+
+&nbsp;
+
+<!--more-->
+
+<hr />
+<h2>More about abstract sockets</h2>
+Abstract sockets on Linux function the same way as other Unix Domain Sockets, except they don't have a filepath associated with them. Instead, you access them via the '@' symbol. For example, /var/run/crio/crio.sock is the socket file associated with the cri-o Container Runtime Interface, and we would access it from our own programs using that file path.
+<br>
+<br>
+Wheras we might create an abstract socket called 'example.sock' and access it by referring to '@example.sock'; No file path needed. Note that it doesn't require a '.sock' extension, that's just to keep up with naming conventions. 
+<br>
+<br>
+<h2>Use cases</h2>
+They are especially useful for container to container communication within the same pod.
+<br>
+<br>
+The following is a list of some advantages over traditional Unix Domain Sockets in a containerized setting, and some of these are relevant to non-containerized workloads as well:
+<ul>
+  <li>No need to keep track of another container's socket mount path.</li>
+  <li>Better performance potential and less overhead than TCP socket communication.</li>
+  <li>No need to make sure a directory exists and is shared properly with other components or users.</li>
+  <li>No directory permissions or SELinux file contexts to manage. This is less of an issue in containerized workloads, however.</li>
+  <li>Access a file using a privileged container, and send its file descriptor to another less privileged container for processing. Abstract sockets work with the same sendmsg() and recvmsg() system calls that you would use in a program that listens on a standard socket.</li>
+  <li>They automatically clean themselves up: the socket no longer appears in the abstract socket namespace when its parent process is no longer running.</li>
+</ul>
+
+
+<h2>Other considerations</h2>
+When <b>wouldn't</b> we want to use abstract sockets?
+<ul>
+  <li>Maybe you have multiple containers in the same pod, and you really don't want all of them to have potential access to your socket (remember that OpenShift and Kubernetes containers in the same pod will share the same network and IPC namespaces by default?). In that case, providing a socket file through a shared volume would provide better isolation.</li>
+  <li> Many programs have been written to only accept file paths as their acceptable socket formats, and don't even give you the option to refer to something in the abstract socket namespace. 
+  <li>Also, if you're not communicating with any other process on the same physical or virtual host, you won't get much value from having something visable to other containers on the same host.</li>
+</ul>
+<br>
+<h2>Examples</h2>
+Some practical RPC client and server examples in Golang first, with brief Python examples and additional details to follow:
+
+Golang - Listening on an abstract socket
+<pre>
+package main
+
+import (
+	"fmt"
+	"log"
+	"net"
+	"net/http"
+	"net/rpc"
+	"os"
+)
+
+// RPCSrv is the base type that needs to be exported for RPC to work.
+type RPCSrv struct {
+}
+
+// MyRPCExportedFunction is the RPC-exported method that returns a bytestring
+// to an imaginary container in the same pod.
+// The reply can be anything, really.
+// I typically use Go structs for more complex, structured data, and send it as marshalled json.
+// Here we're just appending a string and sending it as bytes manually.
+func (g RPCSrv) MyRPCExportedFunction(input *string, reply *[]byte) error {
+	replySuffix := []byte(" And a reply from the server.")
+
+	*reply = append([]byte(*input), replySuffix[:]...)
+
+	fmt.Println("RPC reply result was:", string((*reply)[:]))
+	return nil
+}
+
+func main() {
+	sock := "@my-abstract-socket.sock"
+
+	// Start by cleaning up any leftover sockets of the same name.
+	if err := os.RemoveAll(sock); err != nil {
+		log.Fatal(err)
+	}
+
+	RPCSrv := new(RPCSrv)
+
+	rpc.Register(RPCSrv)
+	rpc.HandleHTTP()
+
+	l, e := net.Listen("unix", sock)
+	if e != nil {
+		fmt.Println("Error starting listener:", e)
+	}
+
+	fmt.Println("Starting container info server with address:", sock)
+	http.Serve(l, nil)
+}
+</pre>
+
+Golang - Connecting to an abstract socket
+<pre>
+package main
+
+import (
+	"fmt"
+	"net/rpc"
+)
+
+var (
+	// data can be a Go datatype like a stuct, whatever the RPC server accepts.
+	data = "Some values from the client,"
+	// reply holds the return value of the RPC function
+	reply []byte
+	// remoteFunction has to match the format of BaseType.ExportedFunction, as defined in the server code.
+	remoteFunction = "RPCSrv.MyRPCExportedFunction"
+	// socketName is the name of the socket to which we will connect.
+	// Note that preceding this name with '@' means we're connecting to a UDS in the abstract socket
+	// namespace, and not a file on disk with that literal name.
+	// Must match the name defined in the server code.
+	socketName = "@my-abstract-socket.sock"
+)
+
+func main() {
+	//fmt.Println(string(data[:]))
+	fmt.Println("sending this data from client:", data)
+
+	//client, err := rpc.DialHTTP("unix", "/tmp/my-abstract-socket.sock")
+	client, err := rpc.DialHTTP("unix", "@my-abstract-socket.sock")
+	if err != nil {
+		fmt.Println("Error dialing socket:", err)
+	}
+
+	err = client.Call(remoteFunction, &data, &reply)
+	if err != nil {
+		fmt.Println("Error calling the RPC server's function:", err)
+	}
+
+	if len(reply) > 0 {
+		fmt.Println("A reply was returned")
+	} else {
+		fmt.Println("The reply was empty")
+	}
+	fmt.Println(string(reply[:]))
+}
+</pre>
+
+Python - Listening on an abstract socket
+<pre>
+import socket
+
+sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+
+server_address = (hostname, int(hostport))
+
+sock.bind('\0my-abstract-socket')
+
+sock.listen(1)
+</pre>
+
+Python - Connecting to an abstract socket
+<pre>
+</pre>
+
+Python - Listing existing sockets
+<pre>
+import psutil
+
+# Abstract socket psutil output
+
+mylist = psutil.net_connections(kind='unix')
+
+print(mylist)
+
+  [sconn(fd=3, family=<AddressFamily.AF_UNIX: 1>, type=1, laddr='@my-abstract-socket', raddr=None, status='NONE', pid=10974)]
+
+
+
+# TCP socket psutil output
+
+inetlist = psutil.net_connections(kind='inet')
+
+print(inetlist)
+
+  [sconn(fd=3, family=<AddressFamily.AF_INET: 2>, type=<SocketKind.SOCK_STREAM: 1>, laddr=('127.0.0.1', 8080), raddr=(), status='LISTEN', pid=10982)]
+</pre>
+
+Listing sockets with lsof
+<pre>
+lsof -U | grep 'my-abstract-socket\|COMMAND'
+
+COMMAND      PID     USER    FD  TYPE             DEVICE SIZE/OFF          NODE                    NAME
+python    129678 username    4u  unix 0x00000000341f0a92      0t0       1052783 @MyBindName type=STREAM
+</pre>
+
+ </p>
+</div>
+</body>
+{{template "footer.html"}}
+</html>
