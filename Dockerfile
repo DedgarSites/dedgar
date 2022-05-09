@@ -13,6 +13,8 @@ RUN /usr/bin/go install github.com/dedgarsites/dedgar@master
 FROM registry.access.redhat.com/ubi8/ubi-minimal as run
 
 ADD scripts/ /usr/local/bin/
+ADD static/ /usr/local/bin/static
+ADD tmpl/ /usr/local/bin/tmpl
 
 RUN mkdir /cert
 

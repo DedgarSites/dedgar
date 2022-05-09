@@ -12,7 +12,7 @@ fi
 while true; do
   echo
   echo "Starting web server:"
-  /go/bin/"$APP_NAME"
+  "$SITE_PATH"/"$APP_NAME"
   echo "Sleeping for a 10 seconds before starting the web server again with new certs."
   sleep 10
 done
