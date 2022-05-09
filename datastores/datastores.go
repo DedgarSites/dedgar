@@ -12,30 +12,15 @@ import (
 	"strings"
 
 	"github.com/dedgarsites/dedgar/models"
-	"github.com/jinzhu/gorm"
-
-	// Convention for gorm usage
-	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
 var (
 	// PostMap containes the names of eligible posts and their paths
-	PostMap      = make(map[string]string)
-	CookieSecret string
-	OAuthID      string
-	OAuthKey     string
-	dbHost       string
-	dbPort       string
-	dbUser       string
-	dbPass       string
-	dbName       string
-	Subject      string
-	CharSet      string
-	Sender       string
-	Recipient    string
-	AuthMap      map[string]bool
-	psqlInfo     = fmt.Sprintf("host=%s port=%s user=%s "+"password=%s dbname=%s sslmode=disable", dbHost, dbPort, dbUser, dbPass, dbName)
-	DB, _        = gorm.Open("postgres", psqlInfo)
+	PostMap   = make(map[string]string)
+	Subject   string
+	CharSet   string
+	Sender    string
+	Recipient string
 )
 
 func FindSummary(fpath string) string {
@@ -85,13 +70,6 @@ func FindPosts(dirpath string, extension string) map[string]string {
 	return PostMap
 }
 
-func CheckDB() {
-	if !DB.HasTable(&models.User{}) {
-		fmt.Println("Creating users table")
-		DB.CreateTable(&models.User{})
-	}
-}
-
 func init() {
 	var appSecrets models.AppSecrets
 
@@ -107,17 +85,8 @@ func init() {
 		fmt.Println("Error Unmarshaling secrets json: ", err)
 	}
 
-	CookieSecret = appSecrets.CookieSecret
-	OAuthID = appSecrets.GoogleAuthID
-	OAuthKey = appSecrets.GoogleAuthKey
-	dbPass = appSecrets.PsqlPassword
-	dbUser = appSecrets.PsqlUser
-	dbPort = appSecrets.PsqlServicePort
-	dbName = appSecrets.PsqlDatabase
-	dbHost = appSecrets.PsqlServiceHost
 	Subject = appSecrets.Subject
 	CharSet = appSecrets.CharSet
 	Sender = appSecrets.Sender
-	AuthMap = appSecrets.AuthMap
 	Recipient = appSecrets.Recipient
 }
