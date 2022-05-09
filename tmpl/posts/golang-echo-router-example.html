@@ -119,7 +119,7 @@ And here we have the content of main_view.html
 &lt;/html&gt;
 </pre>
 Then, make sure you have the latest echo middleware package. It can be installed as easily as the router:
-<pre>go get -u github.com/labstack/echo/middleware
+<pre>go get -u github.com/labstack/echo/v4/middleware
 </pre>
 Now that we have the prerequisites out of the way, open up your main.go file.
 Starting again with the imports to the main package, we have but a few more additions. The html/template package is where most of our added functionality comes from this time around. It's almost identical in usage to text/template, but the output is sanitized for security reasons against things like possible code injection attacks. We also import the io package for use during template rendering, and echo middleware for some extra feedback from our running application. This becomes more useful later on with debugging issues in increasingly complex applications, and is generally handy to have around to help discover issues of which you might not have otherwise been aware.
@@ -127,7 +127,7 @@ Starting again with the imports to the main package, we have but a few more addi
 
 import (
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/middleware/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"html/template"
 	"io"
 	"net/http"
@@ -188,7 +188,7 @@ And our finished product will look like this:
 
 import (
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/middleware/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"html/template"
 	"io"
 	"net/http"
