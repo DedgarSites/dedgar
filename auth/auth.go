@@ -11,8 +11,8 @@ import (
 
 	"github.com/dedgarsites/dedgar/datastores"
 	"github.com/dedgarsites/dedgar/models"
-	"github.com/labstack/echo"
 	"github.com/labstack/echo-contrib/session"
+	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"

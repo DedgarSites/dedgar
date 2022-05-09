@@ -6,7 +6,7 @@ import (
 	"github.com/dedgarsites/dedgar/datastores"
 	"github.com/dedgarsites/dedgar/tree"
 
-	"github.com/labstack/echo"
+	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo-contrib/session"
 
 	"github.com/gorilla/sessions"

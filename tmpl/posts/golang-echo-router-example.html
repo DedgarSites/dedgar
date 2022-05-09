@@ -28,7 +28,7 @@ Now, cd to your $GOPATH and make a new directory. Inside, create a new main.go f
 <pre>package main
 
 import (
-"github.com/labstack/echo"
+"github.com/labstack/echo/v4"
 "net/http"
 )
 </pre>
@@ -126,8 +126,8 @@ Starting again with the imports to the main package, we have but a few more addi
 <pre>package main
 
 import (
-	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/middleware/v4"
 	"html/template"
 	"io"
 	"net/http"
@@ -187,8 +187,8 @@ And our finished product will look like this:
 <pre>package main
 
 import (
-	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/middleware/v4"
 	"html/template"
 	"io"
 	"net/http"
