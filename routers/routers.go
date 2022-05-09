@@ -101,6 +101,7 @@ func init() {
 	Routers.GET("/posts/", controllers.GetPostView)
 	Routers.GET("/post/:postname", controllers.GetPost)
 	Routers.GET("/posts/:postname", controllers.GetPost)
+	Routers.File("/ads.txt", sitePath+"/static/public/ads.txt")
 	Routers.File("/robots.txt", sitePath+"/static/public/robots.txt")
 	Routers.File("/sitemap.xml", sitePath+"/static/public/sitemap.xml")
 }

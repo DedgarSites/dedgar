@@ -30,4 +30,7 @@
   <url>
     <loc>http://www.dedgar.com/post/send-email-with-ses-on-openshift</loc> 
   </url>
+  <url>
+    <loc>http://www.dedgar.com/post/openshift-pod-abstract-socket-communication</loc> 
+  </url>
 </urlset>
