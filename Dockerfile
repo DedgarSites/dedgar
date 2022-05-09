@@ -1,20 +1,21 @@
-FROM golang:latest 
+# begin build container definition
+FROM registry.access.redhat.com/ubi8/ubi-minimal as build
 
-ENV GOPATH=/go
+RUN microdnf install -y golang
 
-ENV PATH=$GOPATH/bin:/usr/local/go/bin:$PATH
+ENV GOBIN=/bin \
+    GOPATH=/go
 
-COPY scripts/ /usr/local/bin/
+RUN /usr/bin/go install github.com/dedgarsites/dedgar@master
 
-RUN mkdir -p /go/src/github.com/dedgarsites/dedgar
-WORKDIR /go/src/github.com/dedgarsites/dedgar
 
-COPY . /go/src/github.com/dedgarsites/dedgar
-RUN go-wrapper download && \
-    go-wrapper install
+# begin run container definition
+FROM registry.access.redhat.com/ubi8/ubi-minimal as run
+
+ADD scripts/ /usr/local/bin/
+
+COPY --from=build /bin/dedgar /usr/local/bin
 
 EXPOSE 8443
 
-USER 1001
-
-CMD ["/usr/local/bin/start.sh"]
+CMD /usr/local/bin/start.sh
