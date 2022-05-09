@@ -14,6 +14,8 @@ FROM registry.access.redhat.com/ubi8/ubi-minimal as run
 
 ADD scripts/ /usr/local/bin/
 
+RUN mkdir /cert
+
 COPY --from=build /bin/dedgar /usr/local/bin
 
 EXPOSE 8443
